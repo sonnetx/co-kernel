@@ -1,0 +1,10 @@
+{
+  "level": "1.0",
+  "task_id": 23,
+  "op_name": "23_Softmax",
+  "kernel_rank": 0,
+  "kernel_name": "reduced_sync_softmax_kernel_edit_1",
+  "archive_runtime_ms": 0.011,
+  "archive_max_diff": "0.0",
+  "code_hash": "001ee596a8ea"
+}

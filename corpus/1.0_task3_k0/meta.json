@@ -1,0 +1,10 @@
+{
+  "level": "1.0",
+  "task_id": 3,
+  "op_name": "3_Batched_matrix_multiplication",
+  "kernel_rank": 0,
+  "kernel_name": "bmm_tiled_shared_memory_optimized_edit_1",
+  "archive_runtime_ms": 0.511,
+  "archive_max_diff": "0.0",
+  "code_hash": "13f05e62704d"
+}

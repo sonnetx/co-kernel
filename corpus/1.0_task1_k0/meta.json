@@ -1,0 +1,10 @@
+{
+  "level": "1.0",
+  "task_id": 1,
+  "op_name": "1_Square_matrix_multiplication_",
+  "kernel_rank": 0,
+  "kernel_name": "regtile_2x2_optimized_sync_edit_1",
+  "archive_runtime_ms": 1.007,
+  "archive_max_diff": "0.001",
+  "code_hash": "400e170d8a41"
+}

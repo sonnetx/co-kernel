@@ -1,0 +1,10 @@
+{
+  "level": "1.0",
+  "task_id": 16,
+  "op_name": "16_Matmul_with_transposed_A",
+  "kernel_rank": 1,
+  "kernel_name": "pipelined_tiled_matmul_base_base",
+  "archive_runtime_ms": 2.702,
+  "archive_max_diff": "0.0",
+  "code_hash": "8ea831710e3c"
+}

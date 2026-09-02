@@ -1,0 +1,10 @@
+{
+  "level": "1.0",
+  "task_id": 1,
+  "op_name": "1_Square_matrix_multiplication_",
+  "kernel_rank": 1,
+  "kernel_name": "regtile_tiled_matmul_base",
+  "archive_runtime_ms": 1.031,
+  "archive_max_diff": "0.001",
+  "code_hash": "5013b2428584"
+}

@@ -1,0 +1,10 @@
+{
+  "level": "1.0",
+  "task_id": 98,
+  "op_name": "98_KLDivLoss",
+  "kernel_rank": 0,
+  "kernel_name": "optimized_kl_div_cuda_base",
+  "archive_runtime_ms": 0.011,
+  "archive_max_diff": "0.002",
+  "code_hash": "4a5e5f6d2fc2"
+}

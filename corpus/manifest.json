@@ -1,0 +1,134 @@
+[
+  {
+    "slug": "1.0_task1_k0",
+    "level": "1.0",
+    "task_id": 1,
+    "op_name": "1_Square_matrix_multiplication_",
+    "kernel_rank": 0,
+    "kernel_name": "regtile_2x2_optimized_sync_edit_1",
+    "archive_runtime_ms": 1.007,
+    "archive_max_diff": "0.001",
+    "code_hash": "400e170d8a41"
+  },
+  {
+    "slug": "1.0_task1_k1",
+    "level": "1.0",
+    "task_id": 1,
+    "op_name": "1_Square_matrix_multiplication_",
+    "kernel_rank": 1,
+    "kernel_name": "regtile_tiled_matmul_base",
+    "archive_runtime_ms": 1.031,
+    "archive_max_diff": "0.001",
+    "code_hash": "5013b2428584"
+  },
+  {
+    "slug": "1.0_task3_k0",
+    "level": "1.0",
+    "task_id": 3,
+    "op_name": "3_Batched_matrix_multiplication",
+    "kernel_rank": 0,
+    "kernel_name": "bmm_tiled_shared_memory_optimized_edit_1",
+    "archive_runtime_ms": 0.511,
+    "archive_max_diff": "0.0",
+    "code_hash": "13f05e62704d"
+  },
+  {
+    "slug": "1.0_task3_k1",
+    "level": "1.0",
+    "task_id": 3,
+    "op_name": "3_Batched_matrix_multiplication",
+    "kernel_rank": 1,
+    "kernel_name": "optimized_bmm_kernel_base",
+    "archive_runtime_ms": 0.513,
+    "archive_max_diff": "0.0",
+    "code_hash": "54d7ed78cfb2"
+  },
+  {
+    "slug": "1.0_task23_k0",
+    "level": "1.0",
+    "task_id": 23,
+    "op_name": "23_Softmax",
+    "kernel_rank": 0,
+    "kernel_name": "reduced_sync_softmax_kernel_edit_1",
+    "archive_runtime_ms": 0.011,
+    "archive_max_diff": "0.0",
+    "code_hash": "001ee596a8ea"
+  },
+  {
+    "slug": "1.0_task23_k1",
+    "level": "1.0",
+    "task_id": 23,
+    "op_name": "23_Softmax",
+    "kernel_rank": 1,
+    "kernel_name": "coalesced_memory_access_softmax_base",
+    "archive_runtime_ms": 0.011,
+    "archive_max_diff": "0.0",
+    "code_hash": "8ee18a6779c2"
+  },
+  {
+    "slug": "1.0_task4_k0",
+    "level": "1.0",
+    "task_id": 4,
+    "op_name": "4_Matrix_vector_multiplication_",
+    "kernel_rank": 0,
+    "kernel_name": "modular_device_functions_matvec_edit_1",
+    "archive_runtime_ms": 0.065,
+    "archive_max_diff": "0.001",
+    "code_hash": "37450a9798b6"
+  },
+  {
+    "slug": "1.0_task4_k1",
+    "level": "1.0",
+    "task_id": 4,
+    "op_name": "4_Matrix_vector_multiplication_",
+    "kernel_rank": 1,
+    "kernel_name": "modular_device_functions_matvec_base",
+    "archive_runtime_ms": 0.065,
+    "archive_max_diff": "0.001",
+    "code_hash": "1e4fe261763a"
+  },
+  {
+    "slug": "1.0_task16_k0",
+    "level": "1.0",
+    "task_id": 16,
+    "op_name": "16_Matmul_with_transposed_A",
+    "kernel_rank": 0,
+    "kernel_name": "tiled_double_output_base",
+    "archive_runtime_ms": 2.288,
+    "archive_max_diff": "0.001",
+    "code_hash": "14fc3d17117a"
+  },
+  {
+    "slug": "1.0_task16_k1",
+    "level": "1.0",
+    "task_id": 16,
+    "op_name": "16_Matmul_with_transposed_A",
+    "kernel_rank": 1,
+    "kernel_name": "pipelined_tiled_matmul_base_base",
+    "archive_runtime_ms": 2.702,
+    "archive_max_diff": "0.0",
+    "code_hash": "8ea831710e3c"
+  },
+  {
+    "slug": "1.0_task98_k0",
+    "level": "1.0",
+    "task_id": 98,
+    "op_name": "98_KLDivLoss",
+    "kernel_rank": 0,
+    "kernel_name": "optimized_kl_div_cuda_base",
+    "archive_runtime_ms": 0.011,
+    "archive_max_diff": "0.002",
+    "code_hash": "4a5e5f6d2fc2"
+  },
+  {
+    "slug": "1.0_task98_k1",
+    "level": "1.0",
+    "task_id": 98,
+    "op_name": "98_KLDivLoss",
+    "kernel_rank": 1,
+    "kernel_name": "adaptive_kl_div_cuda_base",
+    "archive_runtime_ms": 0.012,
+    "archive_max_diff": "0.003",
+    "code_hash": "ec189b9b0051"
+  }
+]
