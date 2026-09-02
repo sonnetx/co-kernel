@@ -1,0 +1,632 @@
+{
+  "env": {
+    "gpu": "NVIDIA H100 80GB HBM3",
+    "torch": "2.5.1+cu124",
+    "cuda": "12.4",
+    "hostname": "sh04-03n05.int",
+    "time": "2026-09-02T11:53:40",
+    "n_iter": 100,
+    "levels": [
+      32,
+      96,
+      240
+    ],
+    "blocks_per_sm": 1,
+    "pressure_threads": 256,
+    "num_sms": 132,
+    "pressure_reg_info": [
+      [
+        32,
+        40,
+        0,
+        0
+      ],
+      [
+        96,
+        127,
+        0,
+        0
+      ],
+      [
+        168,
+        255,
+        0,
+        0
+      ],
+      [
+        240,
+        255,
+        0,
+        0
+      ]
+    ]
+  },
+  "kernels": {
+    "1_task1_k0": {
+      "meta": {
+        "slug": "1_task1_k0",
+        "level": "1",
+        "task_id": 1,
+        "op_name": "1_Square_matrix_multiplication_",
+        "kernel_rank": 0,
+        "kernel_name": "regtile_2x2_optimized_sync_edit_1",
+        "archive_runtime_ms": 1.007,
+        "archive_max_diff": "0.001",
+        "code_hash": "400e170d8a41"
+      },
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 1.090287983417511,
+          "mean_ms": 1.0901276779174804,
+          "p10_ms": 1.088479995727539,
+          "p90_ms": 1.0919359922409058,
+          "min_ms": 1.0857919454574585,
+          "max_ms": 1.0931199789047241,
+          "event_total_ms": 109.01276779174805,
+          "wall_s": 0.11936429100751411,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r96": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      },
+      "status": "ok"
+    },
+    "1_task1_k1": {
+      "meta": {
+        "slug": "1_task1_k1",
+        "level": "1",
+        "task_id": 1,
+        "op_name": "1_Square_matrix_multiplication_",
+        "kernel_rank": 1,
+        "kernel_name": "regtile_tiled_matmul_base",
+        "archive_runtime_ms": 1.031,
+        "archive_max_diff": "0.001",
+        "code_hash": "5013b2428584"
+      },
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 1.1223199963569641,
+          "mean_ms": 1.1223097598552705,
+          "p10_ms": 1.1209280490875244,
+          "p90_ms": 1.1236799955368042,
+          "min_ms": 1.1204479932785034,
+          "max_ms": 1.1246399879455566,
+          "event_total_ms": 112.23097598552704,
+          "wall_s": 0.12151381500007119,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r96": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      },
+      "status": "ok"
+    },
+    "1_task3_k0": {
+      "meta": {
+        "slug": "1_task3_k0",
+        "level": "1",
+        "task_id": 3,
+        "op_name": "3_Batched_matrix_multiplication",
+        "kernel_rank": 0,
+        "kernel_name": "bmm_tiled_shared_memory_optimized_edit_1",
+        "archive_runtime_ms": 0.511,
+        "archive_max_diff": "0.0",
+        "code_hash": "13f05e62704d"
+      },
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.5393439829349518,
+          "mean_ms": 0.5393849563598633,
+          "p10_ms": 0.5385919809341431,
+          "p90_ms": 0.5404800176620483,
+          "min_ms": 0.5378879904747009,
+          "max_ms": 0.5417919754981995,
+          "event_total_ms": 53.93849563598633,
+          "wall_s": 0.06320379499811679,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 2.2185280323028564,
+          "mean_ms": 2.2185052704811095,
+          "p10_ms": 2.2174079418182373,
+          "p90_ms": 2.219360113143921,
+          "min_ms": 2.215872049331665,
+          "max_ms": 2.221791982650757,
+          "event_total_ms": 221.85052704811096,
+          "wall_s": 0.23547287700057495,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 5.303455829620361,
+          "mean_ms": 5.303350720405579,
+          "p10_ms": 5.300928115844727,
+          "p90_ms": 5.305312156677246,
+          "min_ms": 5.298943996429443,
+          "max_ms": 5.307392120361328,
+          "event_total_ms": 530.3350720405579,
+          "wall_s": 0.5628888240025844,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      },
+      "status": "ok"
+    },
+    "1_task3_k1": {
+      "meta": {
+        "slug": "1_task3_k1",
+        "level": "1",
+        "task_id": 3,
+        "op_name": "3_Batched_matrix_multiplication",
+        "kernel_rank": 1,
+        "kernel_name": "optimized_bmm_kernel_base",
+        "archive_runtime_ms": 0.513,
+        "archive_max_diff": "0.0",
+        "code_hash": "54d7ed78cfb2"
+      },
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.5432639718055725,
+          "mean_ms": 0.5433184015750885,
+          "p10_ms": 0.542527973651886,
+          "p90_ms": 0.5443519949913025,
+          "min_ms": 0.5416319966316223,
+          "max_ms": 0.545087993144989,
+          "event_total_ms": 54.33184015750885,
+          "wall_s": 0.06361232401104644,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 2.4364800453186035,
+          "mean_ms": 2.4364972805976866,
+          "p10_ms": 2.4351999759674072,
+          "p90_ms": 2.4377601146698,
+          "min_ms": 2.4335360527038574,
+          "max_ms": 2.4395840167999268,
+          "event_total_ms": 243.64972805976868,
+          "wall_s": 0.25728594600514043,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 5.649119853973389,
+          "mean_ms": 5.648550086021423,
+          "p10_ms": 5.645279884338379,
+          "p90_ms": 5.651167869567871,
+          "min_ms": 5.6411519050598145,
+          "max_ms": 5.652192115783691,
+          "event_total_ms": 564.8550086021423,
+          "wall_s": 0.5974548590020277,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      },
+      "status": "ok"
+    },
+    "1_task23_k0": {
+      "meta": {
+        "slug": "1_task23_k0",
+        "level": "1",
+        "task_id": 23,
+        "op_name": "23_Softmax",
+        "kernel_rank": 0,
+        "kernel_name": "reduced_sync_softmax_kernel_edit_1",
+        "archive_runtime_ms": 0.011,
+        "archive_max_diff": "0.0",
+        "code_hash": "001ee596a8ea"
+      },
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 9.313225746154785e-10,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.012671999633312225,
+          "mean_ms": 0.01266847997903824,
+          "p10_ms": 0.012480000033974648,
+          "p90_ms": 0.012896000407636166,
+          "min_ms": 0.01244799979031086,
+          "max_ms": 0.013407999649643898,
+          "event_total_ms": 1.2668479979038239,
+          "wall_s": 0.010649957999703474,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 0.024480000138282776,
+          "mean_ms": 0.024495040234178304,
+          "p10_ms": 0.024288000538945198,
+          "p90_ms": 0.02470399998128414,
+          "min_ms": 0.024224000051617622,
+          "max_ms": 0.024992000311613083,
+          "event_total_ms": 2.4495040234178305,
+          "wall_s": 0.0160797490098048,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 0.04982399940490723,
+          "mean_ms": 0.04985856018960476,
+          "p10_ms": 0.04960000142455101,
+          "p90_ms": 0.05008000135421753,
+          "min_ms": 0.049375999718904495,
+          "max_ms": 0.050592001527547836,
+          "event_total_ms": 4.985856018960476,
+          "wall_s": 0.037916355999186635,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      },
+      "status": "ok"
+    },
+    "1_task23_k1": {
+      "meta": {
+        "slug": "1_task23_k1",
+        "level": "1",
+        "task_id": 23,
+        "op_name": "23_Softmax",
+        "kernel_rank": 1,
+        "kernel_name": "coalesced_memory_access_softmax_base",
+        "archive_runtime_ms": 0.011,
+        "archive_max_diff": "0.0",
+        "code_hash": "8ee18a6779c2"
+      },
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 3.4924596548080444e-10,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.011872000060975552,
+          "mean_ms": 0.011938879918307065,
+          "p10_ms": 0.011807999573647976,
+          "p90_ms": 0.012128000147640705,
+          "min_ms": 0.011648000217974186,
+          "max_ms": 0.012959999963641167,
+          "event_total_ms": 1.1938879918307066,
+          "wall_s": 0.010773567002615891,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 0.022223999723792076,
+          "mean_ms": 0.022214400339871643,
+          "p10_ms": 0.021888000890612602,
+          "p90_ms": 0.02252800017595291,
+          "min_ms": 0.021856000646948814,
+          "max_ms": 0.022784000262618065,
+          "event_total_ms": 2.2214400339871645,
+          "wall_s": 0.015844305002246983,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 0.044576000422239304,
+          "mean_ms": 0.04462688006460667,
+          "p10_ms": 0.04371200129389763,
+          "p90_ms": 0.04553600028157234,
+          "min_ms": 0.04339199885725975,
+          "max_ms": 0.04598399996757507,
+          "event_total_ms": 4.462688006460667,
+          "wall_s": 0.037187573994742706,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      },
+      "status": "ok"
+    },
+    "1_task4_k0": {
+      "meta": {
+        "slug": "1_task4_k0",
+        "level": "1",
+        "task_id": 4,
+        "op_name": "4_Matrix_vector_multiplication_",
+        "kernel_rank": 0,
+        "kernel_name": "modular_device_functions_matvec_edit_1",
+        "archive_runtime_ms": 0.065,
+        "archive_max_diff": "0.001",
+        "code_hash": "37450a9798b6"
+      },
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.000518798828125,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.0666240006685257,
+          "mean_ms": 0.06662687957286835,
+          "p10_ms": 0.06572800129652023,
+          "p90_ms": 0.06748799979686737,
+          "min_ms": 0.06521599739789963,
+          "max_ms": 0.06851200014352798,
+          "event_total_ms": 6.662687957286835,
+          "wall_s": 0.015944804006721824,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 0.07715199887752533,
+          "mean_ms": 0.07727007932960987,
+          "p10_ms": 0.07635200023651123,
+          "p90_ms": 0.07820799946784973,
+          "min_ms": 0.07587199658155441,
+          "max_ms": 0.07887999713420868,
+          "event_total_ms": 7.727007932960987,
+          "wall_s": 0.02136611800233368,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 0.1432960033416748,
+          "mean_ms": 0.14327104061841964,
+          "p10_ms": 0.14256000518798828,
+          "p90_ms": 0.14390400052070618,
+          "min_ms": 0.14233599603176117,
+          "max_ms": 0.1446399986743927,
+          "event_total_ms": 14.327104061841965,
+          "wall_s": 0.04703401299775578,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      },
+      "status": "ok"
+    },
+    "1_task4_k1": {
+      "meta": {
+        "slug": "1_task4_k1",
+        "level": "1",
+        "task_id": 4,
+        "op_name": "4_Matrix_vector_multiplication_",
+        "kernel_rank": 1,
+        "kernel_name": "coalesced_warp_matvec_v2_edit_1",
+        "archive_runtime_ms": 0.066,
+        "archive_max_diff": "0.001",
+        "code_hash": "a844c016d27e"
+      },
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.000518798828125,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.06647999957203865,
+          "mean_ms": 0.06649119943380356,
+          "p10_ms": 0.06537599861621857,
+          "p90_ms": 0.0674239993095398,
+          "min_ms": 0.0647680014371872,
+          "max_ms": 0.06828799843788147,
+          "event_total_ms": 6.649119943380356,
+          "wall_s": 0.015941916994052008,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 0.07524799928069115,
+          "mean_ms": 0.07528831958770751,
+          "p10_ms": 0.07427199929952621,
+          "p90_ms": 0.0761599987745285,
+          "min_ms": 0.07388799637556076,
+          "max_ms": 0.07683199644088745,
+          "event_total_ms": 7.528831958770752,
+          "wall_s": 0.02117143500072416,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 0.14030399918556213,
+          "mean_ms": 0.14042943954467774,
+          "p10_ms": 0.13977600634098053,
+          "p90_ms": 0.141184002161026,
+          "min_ms": 0.13920000195503235,
+          "max_ms": 0.14179199934005737,
+          "event_total_ms": 14.042943954467773,
+          "wall_s": 0.04674391899607144,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      },
+      "status": "ok"
+    },
+    "1_task16_k0": {
+      "meta": {
+        "slug": "1_task16_k0",
+        "level": "1",
+        "task_id": 16,
+        "op_name": "16_Matmul_with_transposed_A",
+        "kernel_rank": 0,
+        "kernel_name": "tiled_double_output_base",
+        "archive_runtime_ms": 2.288,
+        "archive_max_diff": "0.001",
+        "code_hash": "14fc3d17117a"
+      },
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0009765625,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 2.4730559587478638,
+          "mean_ms": 2.473537600040436,
+          "p10_ms": 2.4711999893188477,
+          "p90_ms": 2.476383924484253,
+          "min_ms": 2.469696044921875,
+          "max_ms": 2.486016035079956,
+          "event_total_ms": 247.35376000404358,
+          "wall_s": 0.2566731879924191,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 6.388192176818848,
+          "mean_ms": 6.3887417602539065,
+          "p10_ms": 6.380191802978516,
+          "p90_ms": 6.3982720375061035,
+          "min_ms": 6.3685760498046875,
+          "max_ms": 6.413440227508545,
+          "event_total_ms": 638.8741760253906,
+          "wall_s": 0.6525193429988576,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 16.100560188293457,
+          "mean_ms": 16.096873321533202,
+          "p10_ms": 16.074207305908203,
+          "p90_ms": 16.117504119873047,
+          "min_ms": 16.06275177001953,
+          "max_ms": 16.145536422729492,
+          "event_total_ms": 1609.6873321533203,
+          "wall_s": 1.6422311350033851,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      },
+      "status": "ok"
+    }
+  }
+}
