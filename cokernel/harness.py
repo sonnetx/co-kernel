@@ -165,13 +165,23 @@ def time_forward(
     n_iter: int = 100,
     warmup: int = 10,
     clock_monitor: ClockMonitor | None = None,
+    abort: threading.Event | None = None,
 ) -> TimingResult:
     # NB: never torch.cuda.synchronize() here — that is cudaDeviceSynchronize,
     # which waits on ALL streams, including the pressure kernel that only
     # terminates when told to stop. Event.synchronize waits on the candidate
     # stream alone.
+    #
+    # `abort` is the watchdog's rescue signal: once it fires the co-runner is
+    # gone, so any further iterations would time the wrong regime. Stop
+    # immediately and keep only the iterations completed under pressure.
+    def aborted() -> bool:
+        return abort is not None and abort.is_set()
+
     with torch.no_grad():
         for _ in range(warmup):
+            if aborted():
+                break
             candidate.forward(*inputs)
         fence = torch.cuda.Event()
         fence.record()
@@ -180,6 +190,8 @@ def time_forward(
         times: list[float] = []
         t0 = time.perf_counter()
         for _ in range(n_iter):
+            if aborted():
+                break
             flush_buf.zero_()
             start = torch.cuda.Event(enable_timing=True)
             end = torch.cuda.Event(enable_timing=True)
@@ -235,12 +247,22 @@ def run_conditions(
         try:
             time.sleep(steady_state_s)  # let the co-runner reach steady state
             watchdog.start()
-            res = time_forward(candidate, inputs, flush_buf, n_iter, warmup, clock_monitor)
+            res = time_forward(
+                candidate, inputs, flush_buf, n_iter, warmup, clock_monitor, abort=fired
+            )
         finally:
             watchdog.cancel()
             pressure.stop()
         if fired.is_set():
-            out[f"pressure_r{nreg}"] = {"starved": True, "timeout_s": timeout_s}
+            # Iterations completed before the rescue ran fully under pressure
+            # and are valid co-located samples; zero completions is genuine
+            # starvation.
+            if res.times_ms:
+                cond = res.summary()
+                cond.update({"aborted": True, "timeout_s": timeout_s})
+            else:
+                cond = {"starved": True, "timeout_s": timeout_s}
+            out[f"pressure_r{nreg}"] = cond
         else:
             out[f"pressure_r{nreg}"] = res.summary()
         time.sleep(0.05)

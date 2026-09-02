@@ -9,9 +9,13 @@
 // footprint sweeps. That makes the register axis the only thing that moves
 // between pressure levels.
 //
-// The stop flag lives in cudaHostAllocMapped memory so the host can stop the
-// kernel without queueing work behind it. The flag is checked once per outer
-// loop (~256*NREG FMAs), a few microseconds at H100 clocks.
+// The stop flag lives in DEVICE memory (an L2 hit for the spinning kernel;
+// a mapped-host flag turns 33K threads into a PCIe read flood that distorts
+// the memory subsystem far beyond the intended contention). The host raises
+// it with cudaMemcpyAsync from pinned memory on a dedicated non-blocking
+// copy stream: the copy engine executes regardless of SM starvation, so the
+// stop path cannot deadlock behind starved kernels. The flag is checked once
+// per outer loop (~1024*NREG FMAs), tens of microseconds at H100 clocks.
 
 #include <torch/extension.h>
 
@@ -28,10 +32,11 @@
 
 namespace {
 
-volatile int* h_stop = nullptr;
-int* d_stop = nullptr;
+int* h_flag = nullptr;   // pinned staging for the async flag copy
+int* d_stop = nullptr;   // device-memory stop flag
 float* d_sink = nullptr;
 cudaStream_t pressure_stream = nullptr;
+cudaStream_t copy_stream = nullptr;
 bool active = false;
 
 template <int NREG>
@@ -44,7 +49,7 @@ __global__ void __launch_bounds__(256, 1)
   }
   while (*stop == 0) {
 #pragma unroll 1
-    for (int outer = 0; outer < 256; ++outer) {
+    for (int outer = 0; outer < 1024; ++outer) {
 #pragma unroll
       for (int i = 0; i < NREG; ++i) {
         acc[i] = fmaf(acc[i], 1.0000001f, 1e-7f);
@@ -59,12 +64,20 @@ __global__ void __launch_bounds__(256, 1)
 }
 
 void ensure_state() {
-  if (h_stop == nullptr) {
-    CUDA_OK(cudaHostAlloc((void**)&h_stop, sizeof(int), cudaHostAllocMapped));
-    CUDA_OK(cudaHostGetDevicePointer((void**)&d_stop, (void*)h_stop, 0));
+  if (h_flag == nullptr) {
+    CUDA_OK(cudaHostAlloc((void**)&h_flag, sizeof(int), cudaHostAllocDefault));
+    CUDA_OK(cudaMalloc(&d_stop, sizeof(int)));
     CUDA_OK(cudaMalloc(&d_sink, sizeof(float)));
     CUDA_OK(cudaStreamCreateWithFlags(&pressure_stream, cudaStreamNonBlocking));
+    CUDA_OK(cudaStreamCreateWithFlags(&copy_stream, cudaStreamNonBlocking));
   }
+}
+
+void set_flag(int value) {
+  *h_flag = value;
+  CUDA_OK(cudaMemcpyAsync(d_stop, h_flag, sizeof(int), cudaMemcpyHostToDevice,
+                          copy_stream));
+  CUDA_OK(cudaStreamSynchronize(copy_stream));
 }
 
 int num_sms() {
@@ -93,8 +106,7 @@ void start(int64_t nreg, int64_t blocks_per_sm, int64_t threads) {
   ensure_state();
   TORCH_CHECK(!active, "pressure kernel already running");
   TORCH_CHECK(threads > 0 && threads <= 256, "threads must be in (0, 256]");
-  *h_stop = 0;
-  __sync_synchronize();
+  set_flag(0);
   dim3 grid(num_sms() * (int)blocks_per_sm);
   dim3 block((int)threads);
   switch (nreg) {
@@ -119,8 +131,7 @@ void start(int64_t nreg, int64_t blocks_per_sm, int64_t threads) {
 
 void stop() {
   if (!active) return;
-  *h_stop = 1;
-  __sync_synchronize();
+  set_flag(1);
   CUDA_OK(cudaStreamSynchronize(pressure_stream));
   active = false;
 }

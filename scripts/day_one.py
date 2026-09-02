@@ -145,7 +145,8 @@ def main() -> int:
                 line += f" | r{lvl} STARVED"
             else:
                 m = cond["median_ms"]
-                line += f" | r{lvl} {m*1000:.1f} us ({m/iso:.2f}x)"
+                partial = f" partial n={cond['n']}" if cond.get("aborted") else ""
+                line += f" | r{lvl} {m*1000:.1f} us ({m/iso:.2f}x{partial})"
         print(line)
         results["kernels"][slug] = rec
         checkpoint()
