@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import statistics
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -204,14 +205,32 @@ def run_conditions(
     res = time_forward(candidate, inputs, flush_buf, n_iter, warmup, clock_monitor)
     out["isolated"] = res.summary()
 
+    # A pressure level that leaves too few registers per SM starves the
+    # candidate outright: its blocks queue behind the never-retiring pressure
+    # blocks. The watchdog stops the co-runner after a timeout, which unblocks
+    # the device, and the pass is recorded as starved instead of timed.
+    timeout_s = max(60.0, 20.0 * res.wall_s)
+
     for nreg in pressure_levels:
         pressure.start(nreg, blocks_per_sm, pressure_threads)
+        fired = threading.Event()
+
+        def _rescue():
+            fired.set()
+            pressure.stop()
+
+        watchdog = threading.Timer(timeout_s, _rescue)
         try:
             time.sleep(steady_state_s)  # let the co-runner reach steady state
+            watchdog.start()
             res = time_forward(candidate, inputs, flush_buf, n_iter, warmup, clock_monitor)
-            out[f"pressure_r{nreg}"] = res.summary()
         finally:
+            watchdog.cancel()
             pressure.stop()
+        if fired.is_set():
+            out[f"pressure_r{nreg}"] = {"starved": True, "timeout_s": timeout_s}
+        else:
+            out[f"pressure_r{nreg}"] = res.summary()
         time.sleep(0.05)
     return out
 

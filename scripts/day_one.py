@@ -35,7 +35,7 @@ def main() -> int:
                     help="extension build root (default: $COKERNEL_BUILD or ./build)")
     ap.add_argument("--n-iter", type=int, default=100)
     ap.add_argument("--warmup", type=int, default=10)
-    ap.add_argument("--levels", type=int, nargs="+", default=[32, 128, 240])
+    ap.add_argument("--levels", type=int, nargs="+", default=[32, 96, 168, 240])
     ap.add_argument("--blocks-per-sm", type=int, default=1)
     ap.add_argument("--pressure-threads", type=int, default=256)
     args = ap.parse_args()
@@ -118,8 +118,12 @@ def main() -> int:
         iso = rec["conditions"]["isolated"]["median_ms"]
         line = f"  isolated {iso*1000:.1f} us"
         for lvl in args.levels:
-            m = rec["conditions"][f"pressure_r{lvl}"]["median_ms"]
-            line += f" | r{lvl} {m*1000:.1f} us ({m/iso:.2f}x)"
+            cond = rec["conditions"][f"pressure_r{lvl}"]
+            if cond.get("starved"):
+                line += f" | r{lvl} STARVED"
+            else:
+                m = cond["median_ms"]
+                line += f" | r{lvl} {m*1000:.1f} us ({m/iso:.2f}x)"
         print(line)
         results["kernels"][slug] = rec
 
@@ -152,14 +156,26 @@ def analyze_flips(results: dict, levels: list[int]) -> dict:
             ],
             "conditions": {},
         }
+        def med(cond: dict) -> float:
+            return cond.get("median_ms", float("inf"))  # starved ranks last
+
         for lvl in levels:
             key = f"pressure_r{lvl}"
-            co_rank = sorted(kernels, key=lambda kv: kv[1][key]["median_ms"])
+            co_rank = sorted(kernels, key=lambda kv: med(kv[1][key]))
+            all_starved = all("median_ms" not in c[key] for _, c in kernels)
             entry["conditions"][key] = {
-                "ranking": [(s, c[key]["median_ms"]) for s, c in co_rank],
-                "top1_flip": co_rank[0][0] != iso_rank[0][0],
+                "ranking": [
+                    (s, c[key].get("median_ms"), bool(c[key].get("starved")))
+                    for s, c in co_rank
+                ],
+                "top1_flip": (not all_starved) and co_rank[0][0] != iso_rank[0][0],
                 "fragility": {
-                    s: c[key]["median_ms"] / c["isolated"]["median_ms"] for s, c in kernels
+                    s: (
+                        c[key]["median_ms"] / c["isolated"]["median_ms"]
+                        if "median_ms" in c[key]
+                        else None
+                    )
+                    for s, c in kernels
                 },
             }
         flips[task] = entry

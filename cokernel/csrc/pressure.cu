@@ -58,8 +58,6 @@ __global__ void __launch_bounds__(256, 1)
   if (s == -1234.5678f) *sink = s;
 }
 
-constexpr int kLevels[] = {32, 128, 240};
-
 void ensure_state() {
   if (h_stop == nullptr) {
     CUDA_OK(cudaHostAlloc((void**)&h_stop, sizeof(int), cudaHostAllocMapped));
@@ -82,8 +80,10 @@ std::vector<std::vector<int64_t>> reg_info() {
   cudaFuncAttributes attr;
   CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<32>));
   out.push_back({32, attr.numRegs, (int64_t)attr.sharedSizeBytes, (int64_t)attr.localSizeBytes});
-  CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<128>));
-  out.push_back({128, attr.numRegs, (int64_t)attr.sharedSizeBytes, (int64_t)attr.localSizeBytes});
+  CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<96>));
+  out.push_back({96, attr.numRegs, (int64_t)attr.sharedSizeBytes, (int64_t)attr.localSizeBytes});
+  CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<168>));
+  out.push_back({168, attr.numRegs, (int64_t)attr.sharedSizeBytes, (int64_t)attr.localSizeBytes});
   CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<240>));
   out.push_back({240, attr.numRegs, (int64_t)attr.sharedSizeBytes, (int64_t)attr.localSizeBytes});
   return out;
@@ -101,14 +101,17 @@ void start(int64_t nreg, int64_t blocks_per_sm, int64_t threads) {
     case 32:
       pressure_kernel<32><<<grid, block, 0, pressure_stream>>>(d_stop, d_sink, 0.5f);
       break;
-    case 128:
-      pressure_kernel<128><<<grid, block, 0, pressure_stream>>>(d_stop, d_sink, 0.5f);
+    case 96:
+      pressure_kernel<96><<<grid, block, 0, pressure_stream>>>(d_stop, d_sink, 0.5f);
+      break;
+    case 168:
+      pressure_kernel<168><<<grid, block, 0, pressure_stream>>>(d_stop, d_sink, 0.5f);
       break;
     case 240:
       pressure_kernel<240><<<grid, block, 0, pressure_stream>>>(d_stop, d_sink, 0.5f);
       break;
     default:
-      TORCH_CHECK(false, "nreg must be one of 32, 128, 240");
+      TORCH_CHECK(false, "nreg must be one of 32, 96, 168, 240");
   }
   CUDA_OK(cudaGetLastError());
   active = true;

@@ -12,7 +12,9 @@ Two CUDA streams in one process. The candidate runs on the legacy default stream
 
 ### Synthetic co-runner
 
-`cokernel/csrc/pressure.cu`. One persistent block per SM, 256 threads, spinning on an FMA chain over NREG live accumulators until the host raises a zero-copy stop flag. NREG in {32, 128, 240} sweeps the register-file footprint from ~12% to ~94% of the SM's 64K registers while thread count, and with it FMA issue pressure and thread-slot usage, stays fixed. Actual registers per thread are read back with `cudaFuncGetAttributes` and recorded, not assumed.
+`cokernel/csrc/pressure.cu`. One persistent block per SM, 256 threads, spinning on an FMA chain over NREG live accumulators until the host raises a zero-copy stop flag. NREG in {32, 96, 168, 240} sweeps the register-file footprint from ~12% to ~94% of the SM's 64K registers while thread count, and with it FMA issue pressure and thread-slot usage, stays fixed. Actual registers per thread are read back with `cudaFuncGetAttributes` and recorded, not assumed.
+
+A pressure level that leaves fewer free registers than a candidate block needs starves the candidate completely, since its blocks queue behind pressure blocks that never retire. A watchdog stops the co-runner after a timeout and the pass is recorded as starved rather than timed. Starvation is data (the kernel cannot make progress next to that neighbor at all), and a starved pass ranks last in the flip analysis.
 
 ### Timing
 
