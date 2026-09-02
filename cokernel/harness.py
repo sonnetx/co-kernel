@@ -212,6 +212,7 @@ def run_conditions(
     inputs = [t.cuda() if isinstance(t, torch.Tensor) else t for t in ref_mod.get_inputs()]
     out: dict[str, dict] = {}
 
+    print("  condition: isolated", flush=True)
     res = time_forward(candidate, inputs, flush_buf, n_iter, warmup, clock_monitor)
     out["isolated"] = res.summary()
 
@@ -222,6 +223,7 @@ def run_conditions(
     timeout_s = max(60.0, 20.0 * res.wall_s)
 
     for nreg in pressure_levels:
+        print(f"  condition: pressure_r{nreg} (watchdog {timeout_s:.0f}s)", flush=True)
         pressure.start(nreg, blocks_per_sm, pressure_threads)
         fired = threading.Event()
 

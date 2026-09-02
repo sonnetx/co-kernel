@@ -16,6 +16,7 @@ ml python/3.12.1 cuda/12.4.0 gcc/12.4.0
 CK=/scratch/groups/roxanad/sonnet/co-kernel
 REPO=/home/groups/roxanad/sonnet/co-kernel
 
+export PYTHONUNBUFFERED=1
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export HF_HUB_ETAG_TIMEOUT=10

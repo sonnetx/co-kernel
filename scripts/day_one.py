@@ -13,11 +13,15 @@ Usage (on a GPU node):
 from __future__ import annotations
 
 import argparse
+import faulthandler
+import functools
 import json
 import os
 import sys
 import time
 from pathlib import Path
+
+print = functools.partial(print, flush=True)  # noqa: A001 - logs must survive a hang
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
@@ -39,6 +43,11 @@ def main() -> int:
     ap.add_argument("--blocks-per-sm", type=int, default=1)
     ap.add_argument("--pressure-threads", type=int, default=256)
     args = ap.parse_args()
+
+    # If anything hangs (a starved launch, a stuck sync), dump all thread
+    # stacks to stderr every 10 minutes so the walltime kill is diagnosable.
+    faulthandler.enable()
+    faulthandler.dump_traceback_later(600, repeat=True)
 
     assert torch.cuda.is_available(), "no CUDA device"
     os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "9.0")
@@ -74,6 +83,7 @@ def main() -> int:
         slug = entry["slug"]
         kdir = args.corpus / slug
         print(f"building {slug} ({entry['op_name']}, archive {entry['archive_runtime_ms']:.3f} ms) ...")
+        t_build = time.perf_counter()
         try:
             cand = harness.build_candidate(
                 kdir / "kernel.cu", build_root / slug, f"cand_{slug}_{entry['code_hash']}"
@@ -82,9 +92,15 @@ def main() -> int:
             print(f"  BUILD FAILED: {e}")
             built[slug] = None
             continue
+        print(f"  built in {time.perf_counter() - t_build:.1f}s")
         built[slug] = cand
 
     results = {"env": env, "kernels": {}}
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+
+    def checkpoint() -> None:
+        args.out.write_text(json.dumps(results, indent=2) + "\n")
+
     for entry in manifest:
         slug = entry["slug"]
         cand = built.get(slug)
@@ -92,14 +108,17 @@ def main() -> int:
         if cand is None:
             rec["status"] = "build_failed"
             results["kernels"][slug] = rec
+            checkpoint()
             continue
         ref_mod = harness.load_ref(args.corpus / slug)
+        print(f"verifying {slug} ...")
         v = harness.verify_candidate(cand, ref_mod)
         rec["verify"] = {"ok": v.ok, "max_abs_diff": v.max_abs_diff, "error": v.error}
         if not v.ok:
             print(f"{slug}: VERIFY FAILED ({v.error})")
             rec["status"] = "verify_failed"
             results["kernels"][slug] = rec
+            checkpoint()
             continue
         print(f"{slug}: verified (max abs diff {v.max_abs_diff:.2e}); timing ...")
         rec["conditions"] = harness.run_conditions(
@@ -126,9 +145,9 @@ def main() -> int:
                 line += f" | r{lvl} {m*1000:.1f} us ({m/iso:.2f}x)"
         print(line)
         results["kernels"][slug] = rec
+        checkpoint()
 
     results["flips"] = analyze_flips(results, args.levels)
-    args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(results, indent=2) + "\n")
     print(f"wrote {args.out}")
     print_flip_table(results["flips"], args.levels)
