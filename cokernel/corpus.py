@@ -17,6 +17,7 @@ distinct source.
 
 from __future__ import annotations
 
+import difflib
 import hashlib
 import json
 import re
@@ -142,13 +143,21 @@ def select_corpus(
         (level, task_id), task_rows = chosen_task
         used_tasks.add((level, task_id))
         task_rows = task_rows.sort_values("CUDA_Runtime")
-        seen_hashes: set[str] = set()
+        picked_codes: list[str] = []
         rank = 0
         for _, r in task_rows.iterrows():
-            h = hashlib.sha256(r["CUDA_Code"].encode()).hexdigest()
-            if h in seen_hashes:
+            code = str(r["CUDA_Code"])
+            # Skip near-duplicates (agents resubmit trivially edited kernels);
+            # a pair that differs by a token can never produce a real flip.
+            if any(
+                difflib.SequenceMatcher(
+                    None, code.splitlines(), prev.splitlines()
+                ).ratio()
+                > 0.95
+                for prev in picked_codes
+            ):
                 continue
-            seen_hashes.add(h)
+            picked_codes.append(code)
             picks.append(
                 KernelPick(
                     level=str(level),

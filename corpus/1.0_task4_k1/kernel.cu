@@ -6,33 +6,6 @@
 #define BLOCK_SIZE 512
 #define WARPS_PER_BLOCK (BLOCK_SIZE/WARP_SIZE)
 
-// Device function for warp-level reduction
-__device__ float warp_reduce_sum(float val) {
-    #pragma unroll
-    for (int offset = WARP_SIZE/2; offset > 0; offset >>= 1) {
-        val += __shfl_down_sync(0xffffffff, val, offset);
-    }
-    return val;
-}
-
-// Device function for block-level reduction
-__device__ float block_reduce_sum(float val) {
-    static __shared__ float shared[WARPS_PER_BLOCK];
-    int lane = threadIdx.x % WARP_SIZE;
-    int warp_id = threadIdx.x / WARP_SIZE;
-
-    val = warp_reduce_sum(val);
-
-    if (lane == 0) shared[warp_id] = val;
-    __syncthreads();
-
-    val = (threadIdx.x < WARPS_PER_BLOCK) ? shared[lane] : 0;
-    if (warp_id == 0) val = warp_reduce_sum(val);
-
-    return val;
-}
-
-// Kernel for matrix-vector multiplication
 template <typename scalar_t>
 __global__ void matvec_mul_kernel(
     const scalar_t* __restrict__ A,
@@ -41,21 +14,42 @@ __global__ void matvec_mul_kernel(
     const int64_t M,
     const int64_t K)
 {
+    __shared__ scalar_t warp_sums[WARPS_PER_BLOCK];
+    
     const int64_t row = blockIdx.x;
     const int64_t tid = threadIdx.x;
-
+    const int64_t warp_id = tid / WARP_SIZE;
+    const int64_t lane = tid % WARP_SIZE;
+    
     scalar_t sum = 0;
     const scalar_t* row_ptr = A + row * K;
-
+    
     #pragma unroll 4
     for (int64_t k = tid; k < K; k += BLOCK_SIZE) {
         sum += row_ptr[k] * B[k];
     }
-
-    sum = block_reduce_sum(sum);
-
-    if (tid == 0) {
-        C[row] = sum;
+    
+    #pragma unroll
+    for (int offset = WARP_SIZE/2; offset > 0; offset >>= 1) {
+        sum += __shfl_down_sync(0xffffffff, sum, offset);
+    }
+    
+    if (lane == 0) {
+        warp_sums[warp_id] = sum;
+    }
+    __syncthreads();
+    
+    if (tid < WARP_SIZE) {
+        sum = (tid < WARPS_PER_BLOCK) ? warp_sums[tid] : 0;
+        
+        #pragma unroll
+        for (int offset = (WARPS_PER_BLOCK + 1)/2; offset > 0; offset >>= 1) {
+            sum += __shfl_down_sync(0xffffffff, sum, offset);
+        }
+        
+        if (tid == 0) {
+            C[row] = sum;
+        }
     }
 }
 
