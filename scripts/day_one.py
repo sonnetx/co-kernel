@@ -39,7 +39,10 @@ def main() -> int:
                     help="extension build root (default: $COKERNEL_BUILD or ./build)")
     ap.add_argument("--n-iter", type=int, default=100)
     ap.add_argument("--warmup", type=int, default=10)
-    ap.add_argument("--levels", type=int, nargs="+", default=[32, 96, 168, 240])
+    # Measured regs/thread on H100 (cudaFuncGetAttributes): 32 -> 40,
+    # 96 -> 127, 240 -> 255 (the launch-bounds cap; NREG=168 also compiles
+    # to 255, so it would duplicate the top level).
+    ap.add_argument("--levels", type=int, nargs="+", default=[32, 96, 240])
     ap.add_argument("--blocks-per-sm", type=int, default=1)
     ap.add_argument("--pressure-threads", type=int, default=256)
     args = ap.parse_args()
