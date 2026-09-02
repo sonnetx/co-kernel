@@ -96,14 +96,51 @@ def load_level(parquet_path: str | Path) -> pd.DataFrame:
     return df
 
 
+def _select_diverse(task_rows, kernels_per_task: int, runtime_band: float) -> list:
+    """Pick source-diverse kernels within a runtime band of the fastest.
+
+    Top-k-by-runtime yields near-tied kernels that are also near-identical in
+    source (agents converge on one strategy), which is the worst case for
+    observing a rank flip. Instead: keep correct kernels within `runtime_band`x
+    of the fastest (close enough that differential fragility can invert them),
+    drop near-duplicates, then greedily grow the set by always adding the
+    kernel least similar to those already chosen. The fastest kernel is always
+    included so the isolated top-1 is a real archive winner.
+    """
+    rows = list(task_rows.sort_values("CUDA_Runtime").itertuples(index=False))
+    best = rows[0].CUDA_Runtime
+    band = [r for r in rows if r.CUDA_Runtime <= best * runtime_band]
+
+    chosen = [band[0]]
+    chosen_src = [str(band[0].CUDA_Code).splitlines()]
+    pool = [(r, str(r.CUDA_Code).splitlines()) for r in band[1:]]
+    while pool and len(chosen) < kernels_per_task:
+        # Rank the pool by similarity to the already-chosen set, take the least
+        # similar, drop anything that is a near-duplicate of a chosen kernel.
+        scored = [
+            (max(difflib.SequenceMatcher(None, src, c).ratio() for c in chosen_src), r, src)
+            for r, src in pool
+        ]
+        scored.sort(key=lambda t: t[0])
+        sim, r, src = scored[0]
+        pool = [(rr, ss) for _s, rr, ss in scored[1:]]
+        if sim > 0.95:  # everything left is a near-duplicate; stop
+            break
+        chosen.append(r)
+        chosen_src.append(src)
+    return chosen
+
+
 def select_corpus(
     df: pd.DataFrame,
     categories: list[str] = DEFAULT_CATEGORIES,
-    kernels_per_task: int = 2,
-    min_kernels: int = 4,
+    kernels_per_task: int = 3,
+    min_kernels: int = 6,
     min_runtime_ms: float = 0.02,
+    runtime_band: float = 1.5,
 ) -> list[KernelPick]:
-    """Pick one task per category, top-k fastest distinct correct kernels each."""
+    """Pick one task per category, then source-diverse kernels within a
+    runtime band of the fastest correct kernel for that task."""
     correct = df[df["Correct"] & df["CUDA_Runtime"].notna() & (df["CUDA_Runtime"] > 0)]
     picks: list[KernelPick] = []
     used_tasks: set[tuple[str, int]] = set()
@@ -145,38 +182,23 @@ def select_corpus(
         # Level_ID parses as a float from parquet; slugs feed C identifiers
         # (TORCH_EXTENSION_NAME), so normalize "1.0" -> "1".
         level = str(int(float(level)))
-        task_rows = task_rows.sort_values("CUDA_Runtime")
-        picked_codes: list[str] = []
-        rank = 0
-        for _, r in task_rows.iterrows():
-            code = str(r["CUDA_Code"])
-            # Skip near-duplicates (agents resubmit trivially edited kernels);
-            # a pair that differs by a token can never produce a real flip.
-            if any(
-                difflib.SequenceMatcher(
-                    None, code.splitlines(), prev.splitlines()
-                ).ratio()
-                > 0.95
-                for prev in picked_codes
-            ):
-                continue
-            picked_codes.append(code)
+        chosen = _select_diverse(task_rows, kernels_per_task, runtime_band)
+        # Rank within the task by isolated archive runtime (rank 0 = fastest).
+        chosen.sort(key=lambda r: r.CUDA_Runtime)
+        for rank, r in enumerate(chosen):
             picks.append(
                 KernelPick(
                     level=str(level),
                     task_id=int(task_id),
-                    op_name=str(r["Op_Name"]),
+                    op_name=str(r.Op_Name),
                     kernel_rank=rank,
-                    kernel_name=str(r["Kernel_Name"]),
-                    archive_runtime_ms=float(r["CUDA_Runtime"]),
-                    archive_max_diff=str(r["Max_Diff"]),
-                    cuda_code=str(r["CUDA_Code"]),
-                    ref_code=str(r["PyTorch_Code_Module"]),
+                    kernel_name=str(r.Kernel_Name),
+                    archive_runtime_ms=float(r.CUDA_Runtime),
+                    archive_max_diff=str(r.Max_Diff),
+                    cuda_code=str(r.CUDA_Code),
+                    ref_code=str(r.PyTorch_Code_Module),
                 )
             )
-            rank += 1
-            if rank >= kernels_per_task:
-                break
     return picks
 
 

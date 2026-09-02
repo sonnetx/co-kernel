@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """Day-one falsification experiment.
 
-Ten agent-generated kernels (5 tasks x top-2 from the Sakana archive), timed
-isolated and under a synthetic co-runner at three register-pressure levels,
-two-stream single-process co-execution on one H100. The question is binary:
-does any task's top-1 kernel flip under pressure?
+Agent-generated kernels (a handful of KernelBench tasks, several source-diverse
+correct kernels each within a runtime band of the fastest, from the Sakana
+archive), timed isolated and under a synthetic co-runner at three
+register-pressure levels, two-stream single-process co-execution on one H100.
+The question is binary: does any task's top-1 kernel flip under pressure?
+
+Each kernel is measured in its own subprocess (measure_one.py) under a hard
+wall timeout, so a kernel that hangs the CUDA context is abandoned rather than
+consuming the whole allocation.
 
 Usage (on a GPU node):
     python scripts/day_one.py --corpus corpus --out results/day_one.json
@@ -13,10 +18,10 @@ Usage (on a GPU node):
 from __future__ import annotations
 
 import argparse
-import faulthandler
 import functools
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -29,6 +34,56 @@ sys.path.insert(0, str(REPO))
 import torch  # noqa: E402
 
 from cokernel import harness  # noqa: E402
+
+
+def measure_kernel(slug: str, entry: dict, args, build_root: Path, rec_path: Path) -> dict:
+    """Run measure_one.py for one kernel with a hard wall timeout.
+
+    Isolating each kernel in a subprocess means a kernel that hangs the CUDA
+    context (internal streams + host-side sync, or register starvation with no
+    return the watchdog can reach) is killed and abandoned; the sweep goes on.
+    The per-kernel budget covers build + verify + (1 + n_levels) timed windows,
+    each capped by the in-process watchdog, plus generous slack.
+    """
+    n_windows = 1 + len(args.levels)
+    budget_s = 180 + n_windows * 90  # matches the harness watchdog ceiling
+    cmd = [
+        sys.executable, str(REPO / "scripts" / "measure_one.py"),
+        "--corpus", str(args.corpus), "--slug", slug,
+        "--build-dir", str(build_root), "--out", str(rec_path),
+        "--n-iter", str(args.n_iter), "--warmup", str(args.warmup),
+        "--levels", *[str(x) for x in args.levels],
+        "--blocks-per-sm", str(args.blocks_per_sm),
+        "--pressure-threads", str(args.pressure_threads),
+    ]
+    print(f"{slug} ({entry['op_name']}, archive {entry['archive_runtime_ms']:.3f} ms) "
+          f"-> subprocess (budget {budget_s}s)")
+    t0 = time.perf_counter()
+    try:
+        subprocess.run(cmd, timeout=budget_s, check=False)
+    except subprocess.TimeoutExpired:
+        print(f"  {slug}: HUNG, killed after {budget_s}s")
+        return {"meta": entry, "status": "hung", "budget_s": budget_s}
+    dt = time.perf_counter() - t0
+    if rec_path.exists():
+        rec = json.loads(rec_path.read_text())
+        status = rec.get("status", "?")
+        if status == "ok":
+            iso = rec["conditions"]["isolated"]["median_ms"]
+            line = f"  {slug}: ok in {dt:.0f}s | isolated {iso*1000:.1f} us"
+            for lvl in args.levels:
+                cond = rec["conditions"][f"pressure_r{lvl}"]
+                if cond.get("starved"):
+                    line += f" | r{lvl} STARVED"
+                else:
+                    partial = f" n={cond['n']}" if cond.get("aborted") else ""
+                    line += f" | r{lvl} {cond['median_ms']/iso:.2f}x{partial}"
+            print(line)
+        else:
+            print(f"  {slug}: {status} ({rec.get('verify',{}).get('error') or rec.get('error','')})")
+        return rec
+    print(f"  {slug}: no record written (crashed before first dump)")
+    return {"meta": entry, "status": "crashed"}
 
 
 def main() -> int:
@@ -47,15 +102,7 @@ def main() -> int:
     ap.add_argument("--pressure-threads", type=int, default=256)
     args = ap.parse_args()
 
-    # If anything hangs (a starved launch, a stuck sync), dump all thread
-    # stacks to stderr every 10 minutes so the walltime kill is diagnosable.
-    faulthandler.enable()
-    faulthandler.dump_traceback_later(600, repeat=True)
-
-    assert torch.cuda.is_available(), "no CUDA device"
-    os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "9.0")
     build_root = args.build_dir or Path(os.environ.get("COKERNEL_BUILD", REPO / "build"))
-
     env = {
         "gpu": torch.cuda.get_device_name(0),
         "torch": torch.__version__,
@@ -69,90 +116,19 @@ def main() -> int:
     }
     print(f"env: {json.dumps(env)}")
 
-    print("building pressure extension ...")
-    pressure = harness.build_pressure(REPO / "cokernel" / "csrc", build_root / "pressure")
-    reg_info = pressure.reg_info()
-    env["num_sms"] = pressure.num_sms()
-    env["pressure_reg_info"] = reg_info
-    print(f"SMs: {env['num_sms']}; pressure levels (nreg, regs/thread, smem, local): {reg_info}")
-
     manifest = harness.load_manifest(args.corpus)
-    clock_monitor = harness.ClockMonitor()
-    flush_buf = torch.empty(harness.L2_FLUSH_BYTES // 4, dtype=torch.float32, device="cuda")
-
-    # Build everything AOT before any timing.
-    built = {}
-    for entry in manifest:
-        slug = entry["slug"]
-        kdir = args.corpus / slug
-        print(f"building {slug} ({entry['op_name']}, archive {entry['archive_runtime_ms']:.3f} ms) ...")
-        t_build = time.perf_counter()
-        try:
-            cand = harness.build_candidate(
-                kdir / "kernel.cu", build_root / slug, f"cand_{slug}_{entry['code_hash']}"
-            )
-        except Exception as e:  # noqa: BLE001
-            print(f"  BUILD FAILED: {e}")
-            built[slug] = None
-            continue
-        print(f"  built in {time.perf_counter() - t_build:.1f}s")
-        built[slug] = cand
-
     results = {"env": env, "kernels": {}}
     args.out.parent.mkdir(parents=True, exist_ok=True)
-
-    def checkpoint() -> None:
-        args.out.write_text(json.dumps(results, indent=2) + "\n")
+    rec_dir = args.out.parent / f"{args.out.stem}_records"
+    rec_dir.mkdir(parents=True, exist_ok=True)
 
     for entry in manifest:
         slug = entry["slug"]
-        cand = built.get(slug)
-        rec: dict = {"meta": entry}
-        if cand is None:
-            rec["status"] = "build_failed"
-            results["kernels"][slug] = rec
-            checkpoint()
-            continue
-        ref_mod = harness.load_ref(args.corpus / slug)
-        print(f"verifying {slug} ...")
-        v = harness.verify_candidate(cand, ref_mod)
-        rec["verify"] = {"ok": v.ok, "max_abs_diff": v.max_abs_diff, "error": v.error}
-        if not v.ok:
-            print(f"{slug}: VERIFY FAILED ({v.error})")
-            rec["status"] = "verify_failed"
-            results["kernels"][slug] = rec
-            checkpoint()
-            continue
-        print(f"{slug}: verified (max abs diff {v.max_abs_diff:.2e}); timing ...")
-        rec["conditions"] = harness.run_conditions(
-            cand,
-            ref_mod,
-            pressure,
-            flush_buf,
-            pressure_levels=args.levels,
-            blocks_per_sm=args.blocks_per_sm,
-            pressure_threads=args.pressure_threads,
-            n_iter=args.n_iter,
-            warmup=args.warmup,
-            clock_monitor=clock_monitor,
-        )
-        rec["status"] = "ok"
-        iso = rec["conditions"]["isolated"]["median_ms"]
-        line = f"  isolated {iso*1000:.1f} us"
-        for lvl in args.levels:
-            cond = rec["conditions"][f"pressure_r{lvl}"]
-            if cond.get("starved"):
-                line += f" | r{lvl} STARVED"
-            else:
-                m = cond["median_ms"]
-                partial = f" partial n={cond['n']}" if cond.get("aborted") else ""
-                line += f" | r{lvl} {m*1000:.1f} us ({m/iso:.2f}x{partial})"
-        print(line)
+        rec = measure_kernel(slug, entry, args, build_root, rec_dir / f"{slug}.json")
         results["kernels"][slug] = rec
-        checkpoint()
+        results["flips"] = analyze_flips(results, args.levels)
+        args.out.write_text(json.dumps(results, indent=2) + "\n")  # checkpoint every kernel
 
-    results["flips"] = analyze_flips(results, args.levels)
-    args.out.write_text(json.dumps(results, indent=2) + "\n")
     print(f"wrote {args.out}")
     print_flip_table(results["flips"], args.levels)
     return 0
