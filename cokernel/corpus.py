@@ -26,13 +26,16 @@ from pathlib import Path
 import pandas as pd
 
 # Preferred day-one categories, matched against Op_Name in order. Spans
-# compute-bound (matmuls) and bandwidth-bound (softmax, reductions, scans).
+# compute-bound (matmuls) and bandwidth-bound (matvec, softmax, losses).
+# Reductions/scans are excluded implicitly: their references take the
+# reduction dim as an init parameter.
 DEFAULT_CATEGORIES = [
     r"Square_matrix_multiplication",
     r"Batched_matrix_multiplication",
-    r"^23_Softmax|Softmax",
-    r"Sum_reduction|Product_reduction|Mean_reduction",
-    r"cumsum|Cumulative|Scan|Argmax|Argmin",
+    r"Softmax",
+    r"Matrix_vector_multiplication",
+    r"Matmul_with_transposed",
+    r"MSELoss|CrossEntropy|KLDiv|CosineSimilarity|HingeLoss",
 ]
 
 
