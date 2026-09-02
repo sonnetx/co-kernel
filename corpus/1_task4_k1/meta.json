@@ -1,5 +1,5 @@
 {
-  "level": "1.0",
+  "level": "1",
   "task_id": 4,
   "op_name": "4_Matrix_vector_multiplication_",
   "kernel_rank": 1,

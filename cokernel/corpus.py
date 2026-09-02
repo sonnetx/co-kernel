@@ -142,6 +142,9 @@ def select_corpus(
 
         (level, task_id), task_rows = chosen_task
         used_tasks.add((level, task_id))
+        # Level_ID parses as a float from parquet; slugs feed C identifiers
+        # (TORCH_EXTENSION_NAME), so normalize "1.0" -> "1".
+        level = str(int(float(level)))
         task_rows = task_rows.sort_values("CUDA_Runtime")
         picked_codes: list[str] = []
         rank = 0

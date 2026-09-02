@@ -44,8 +44,12 @@ def _load_module_from_source(py_source: str, name: str):
 
 def build_candidate(kernel_cu: Path, build_dir: Path, name: str):
     """AOT-compile one archive kernel as a torch extension; returns module."""
+    import re as _re
+
     from torch.utils.cpp_extension import load
 
+    # The name becomes TORCH_EXTENSION_NAME and must be a valid C identifier.
+    name = _re.sub(r"\W", "_", name)
     build_dir.mkdir(parents=True, exist_ok=True)
     return load(
         name=name,

@@ -1,5 +1,5 @@
 {
-  "level": "1.0",
+  "level": "1",
   "task_id": 3,
   "op_name": "3_Batched_matrix_multiplication",
   "kernel_rank": 0,
