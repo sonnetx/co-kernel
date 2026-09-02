@@ -115,20 +115,23 @@ def select_corpus(
             .reset_index()
             .sort_values("n", ascending=False)
         )
-        for _, row in stats.iterrows():
-            key = (str(row["Level_ID"]), int(row["Task_ID"]))
-            if key in used_tasks or row["n"] < min_kernels:
-                continue
-            if row["best"] < min_runtime_ms:
-                continue
-            task_rows = cand[
-                (cand["Level_ID"] == row["Level_ID"]) & (cand["Task_ID"] == row["Task_ID"])
-            ]
-            ref_code = task_rows.iloc[0]["PyTorch_Code_Module"]
-            if not _init_inputs_empty(ref_code):
-                continue
-            chosen_task = (key, task_rows)
-            break
+        for floor in (min_runtime_ms, 0.0):  # drop the floor if it empties the category
+            for _, row in stats.iterrows():
+                key = (str(row["Level_ID"]), int(row["Task_ID"]))
+                if key in used_tasks or row["n"] < min_kernels:
+                    continue
+                if row["best"] < floor:
+                    continue
+                task_rows = cand[
+                    (cand["Level_ID"] == row["Level_ID"]) & (cand["Task_ID"] == row["Task_ID"])
+                ]
+                ref_code = task_rows.iloc[0]["PyTorch_Code_Module"]
+                if not _init_inputs_empty(ref_code):
+                    continue
+                chosen_task = (key, task_rows)
+                break
+            if chosen_task is not None:
+                break
         if chosen_task is None:
             print(f"WARNING: no eligible task for category {pattern!r}, skipping")
             continue
