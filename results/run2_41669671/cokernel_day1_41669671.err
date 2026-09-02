@@ -1,0 +1,162 @@
+/scratch/groups/roxanad/sonnet/co-kernel/venv/lib/python3.12/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/scratch/groups/roxanad/sonnet/co-kernel/venv/lib/python3.12/site-packages/torch/cuda/streams.py", line 225 in synchronize
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 178 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/scratch/groups/roxanad/sonnet/co-kernel/venv/lib/python3.12/site-packages/torch/cuda/streams.py", line 225 in synchronize
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 189 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/scratch/groups/roxanad/sonnet/co-kernel/venv/lib/python3.12/site-packages/torch/cuda/streams.py", line 225 in synchronize
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 178 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 175 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 175 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 175 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 175 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 175 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 175 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 175 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 175 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+Timeout (0:10:00)!
+Thread 0x00007f9297d4c700 (most recent call first):
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 359 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 655 in wait
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1429 in run
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1073 in _bootstrap_inner
+  File "/share/software/user/open/python/3.12.1/lib/python3.12/threading.py", line 1030 in _bootstrap
+
+Thread 0x00007f95ba30a740 (most recent call first):
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 175 in time_forward
+  File "/home/groups/roxanad/sonnet/co-kernel/cokernel/harness.py", line 238 in run_conditions
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 124 in main
+  File "/home/groups/roxanad/sonnet/co-kernel/scripts/day_one.py", line 221 in <module>
+[2026-09-02T00:28:48.011] error: *** JOB 41669671 ON sh04-03n05 CANCELLED AT 2026-09-02T00:28:48 DUE TO TIME LIMIT ***
