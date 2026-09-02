@@ -3,8 +3,8 @@
   "task_id": 3,
   "op_name": "3_Batched_matrix_multiplication",
   "kernel_rank": 1,
-  "kernel_name": "optimized_bmm_kernel_base",
-  "archive_runtime_ms": 0.513,
+  "kernel_name": "bmm_stream_overlap_base_base",
+  "archive_runtime_ms": 0.546,
   "archive_max_diff": "0.0",
-  "code_hash": "54d7ed78cfb2"
+  "code_hash": "852f35e20041"
 }

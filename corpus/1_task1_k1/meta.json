@@ -3,8 +3,8 @@
   "task_id": 1,
   "op_name": "1_Square_matrix_multiplication_",
   "kernel_rank": 1,
-  "kernel_name": "regtile_tiled_matmul_base",
-  "archive_runtime_ms": 1.031,
+  "kernel_name": "uniform_control_tiled_matmul_base_base",
+  "archive_runtime_ms": 1.051,
   "archive_max_diff": "0.001",
-  "code_hash": "5013b2428584"
+  "code_hash": "5f892411a3e9"
 }

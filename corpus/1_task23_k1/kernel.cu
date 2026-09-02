@@ -6,7 +6,7 @@
 #define THREADS_PER_BLOCK 256
 #define WARP_SIZE 32
 
-__inline__ __device__ float warp_reduce_max(float val) {
+__device__ __forceinline__ float warp_reduce_max(float val) {
     #pragma unroll
     for (int offset = WARP_SIZE/2; offset > 0; offset /= 2) {
         val = max(val, __shfl_down_sync(0xffffffff, val, offset));
@@ -14,7 +14,7 @@ __inline__ __device__ float warp_reduce_max(float val) {
     return val;
 }
 
-__inline__ __device__ float warp_reduce_sum(float val) {
+__device__ __forceinline__ float warp_reduce_sum(float val) {
     #pragma unroll
     for (int offset = WARP_SIZE/2; offset > 0; offset /= 2) {
         val += __shfl_down_sync(0xffffffff, val, offset);
@@ -24,81 +24,82 @@ __inline__ __device__ float warp_reduce_sum(float val) {
 
 __global__ void softmax_kernel(const float* __restrict__ x, float* __restrict__ y, int num_features) {
     const int tid = threadIdx.x;
-    const int lane_id = tid % WARP_SIZE;
-    const int warp_id = tid / WARP_SIZE;
+    const int wid = tid / WARP_SIZE;
+    const int lane = tid % WARP_SIZE;
     const int batch_idx = blockIdx.x;
-    const int num_warps = THREADS_PER_BLOCK / WARP_SIZE;
-    
-    const float* x_row = x + batch_idx * num_features;
-    float* y_row = y + batch_idx * num_features;
-    
-    extern __shared__ float shared_data[];
-    float* warp_maxes = shared_data;
-    float* warp_sums = shared_data + num_warps;
+    const int num_warps = blockDim.x / WARP_SIZE;
+
+    extern __shared__ float smem[];
+    float* warp_results = smem;
+
+    const int items_per_warp = (num_features + num_warps - 1) / num_warps;
+    const int warp_start = wid * items_per_warp;
+    const int warp_end = min(warp_start + items_per_warp, num_features);
 
     float thread_max = -INFINITY;
-    
-    // Ensure coalesced memory access by having consecutive threads access consecutive memory locations
-    for (int i = tid; i < num_features; i += THREADS_PER_BLOCK) {
-        thread_max = max(thread_max, x_row[i]);
+    for (int idx = warp_start + lane; idx < warp_end; idx += WARP_SIZE) {
+        thread_max = max(thread_max, x[batch_idx * num_features + idx]);
     }
-
+    
     float warp_max = warp_reduce_max(thread_max);
+
+    if (lane == 0) {
+        warp_results[wid] = warp_max;
+    }
     
-    if (lane_id == 0) {
-        warp_maxes[warp_id] = warp_max;
-    }
     __syncthreads();
 
-    if (warp_id == 0) {
-        float val = (tid < num_warps) ? warp_maxes[tid] : -INFINITY;
-        val = warp_reduce_max(val);
-        if (tid == 0) {
-            warp_maxes[0] = val;
+    float global_max;
+    if (tid == 0) {
+        global_max = warp_results[0];
+        for (int i = 1; i < num_warps; i++) {
+            global_max = max(global_max, warp_results[i]);
         }
+        warp_results[0] = global_max;
     }
     __syncthreads();
+    
+    global_max = warp_results[0];
 
-    const float row_max = warp_maxes[0];
     float thread_sum = 0.0f;
-
-    for (int i = tid; i < num_features; i += THREADS_PER_BLOCK) {
-        float exp_val = __expf(x_row[i] - row_max);
-        y_row[i] = exp_val; // store intermediate result
-        thread_sum += exp_val;
+    for (int idx = warp_start + lane; idx < warp_end; idx += WARP_SIZE) {
+        const int global_idx = batch_idx * num_features + idx;
+        float val = __expf(x[global_idx] - global_max);
+        y[global_idx] = val;
+        thread_sum += val;
     }
 
     float warp_sum = warp_reduce_sum(thread_sum);
-    
-    if (lane_id == 0) {
-        warp_sums[warp_id] = warp_sum;
+
+    if (lane == 0) {
+        warp_results[wid] = warp_sum;
     }
+
     __syncthreads();
 
-    if (warp_id == 0) {
-        float val = (tid < num_warps) ? warp_sums[tid] : 0.0f;
-        val = warp_reduce_sum(val);
-        if (tid == 0) {
-            warp_sums[0] = val;
+    if (tid == 0) {
+        float global_sum = warp_results[0];
+        for (int i = 1; i < num_warps; i++) {
+            global_sum += warp_results[i];
         }
+        warp_results[0] = global_sum;
     }
     __syncthreads();
 
-    const float inv_sum = 1.0f / warp_sums[0];
+    float global_sum = warp_results[0];
 
-    for (int i = tid; i < num_features; i += THREADS_PER_BLOCK) {
-        y_row[i] *= inv_sum;
+    for (int idx = warp_start + lane; idx < warp_end; idx += WARP_SIZE) {
+        y[batch_idx * num_features + idx] /= global_sum;
     }
 }
 
 void softmax_forward_cuda(const float* x, float* y, int batch_size, int num_features) {
-    dim3 grid_dim(batch_size);
-    dim3 block_dim(THREADS_PER_BLOCK);
+    dim3 grid(batch_size);
+    dim3 block(THREADS_PER_BLOCK);
     
-    int num_warps = THREADS_PER_BLOCK / WARP_SIZE;
-    int shared_mem_size = sizeof(float) * num_warps * 2;
-
-    softmax_kernel<<<grid_dim, block_dim, shared_mem_size>>>(x, y, num_features);
+    int shared_mem_size = (THREADS_PER_BLOCK / WARP_SIZE) * sizeof(float);
+    
+    softmax_kernel<<<grid, block, shared_mem_size>>>(x, y, num_features);
 }
 
 torch::Tensor forward(torch::Tensor x) {

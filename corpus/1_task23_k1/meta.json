@@ -3,8 +3,8 @@
   "task_id": 23,
   "op_name": "23_Softmax",
   "kernel_rank": 1,
-  "kernel_name": "coalesced_memory_access_softmax_base",
-  "archive_runtime_ms": 0.011,
+  "kernel_name": "minimal_sync_softmax_base",
+  "archive_runtime_ms": 0.013,
   "archive_max_diff": "0.0",
-  "code_hash": "8ee18a6779c2"
+  "code_hash": "a4f2ac18b7bc"
 }

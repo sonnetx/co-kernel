@@ -6,80 +6,85 @@
 #define TILE_M 16
 #define TILE_N 16
 #define BLOCK_K 32
-#define NUM_STREAMS 2
 
-__global__ void pipelinedMatMulKernel(const float* __restrict__ A,
-                                     const float* __restrict__ B,
-                                     float* __restrict__ C,
-                                     int K, int M, int N,
-                                     int chunk_start, int chunk_size) {
-    __shared__ float As[2][BLOCK_K][TILE_M];
-    __shared__ float Bs[2][BLOCK_K][TILE_N];
+// Device function to load data from matrix A into shared memory
+__device__ __forceinline__ void loadTileA(float (&As)[BLOCK_K][TILE_M],
+                                         const float* __restrict__ A,
+                                         int k0, int M, int K,
+                                         int tid, int totalThreads) {
+    #pragma unroll 4
+    for (int index = tid; index < BLOCK_K * TILE_M; index += totalThreads) {
+        int t = index / TILE_M;
+        int m = index % TILE_M;
+        int global_k = k0 + t;
+        int global_m = blockIdx.x * TILE_M + m;
+        As[t][m] = (global_k < K && global_m < M) ? __ldg(&A[global_k * M + global_m]) : 0.0f;
+    }
+}
+
+// Device function to load data from matrix B into shared memory
+__device__ __forceinline__ void loadTileB(float (&Bs)[BLOCK_K][TILE_N],
+                                         const float* __restrict__ B,
+                                         int k0, int N, int K,
+                                         int tid, int totalThreads) {
+    #pragma unroll 4
+    for (int index = tid; index < BLOCK_K * TILE_N; index += totalThreads) {
+        int t = index / TILE_N;
+        int n = index % TILE_N;
+        int global_k = k0 + t;
+        int global_n = blockIdx.y * TILE_N + n;
+        Bs[t][n] = (global_k < K && global_n < N) ? __ldg(&B[global_k * N + global_n]) : 0.0f;
+    }
+}
+
+// Device function to compute partial dot product
+__device__ __forceinline__ float computeDotProduct(const float (&As)[BLOCK_K][TILE_M],
+                                                  const float (&Bs)[BLOCK_K][TILE_N],
+                                                  int tx, int ty) {
+    float sum = 0.0f;
+    #pragma unroll 8
+    for (int t = 0; t < BLOCK_K; t++) {
+        sum = __fmaf_rn(As[t][tx], Bs[t][ty], sum);
+    }
+    return sum;
+}
+
+__global__ void modularMatMulKernel(const float* __restrict__ A,
+                                   const float* __restrict__ B,
+                                   float* __restrict__ C,
+                                   int K, int M, int N) {
+    __shared__ float As[BLOCK_K][TILE_M];
+    __shared__ float Bs[BLOCK_K][TILE_N];
     
-    int row = blockIdx.x * TILE_M + threadIdx.x;
-    int col = blockIdx.y * TILE_N + threadIdx.y;
+    const int tx = threadIdx.x;
+    const int ty = threadIdx.y;
+    const int tid = ty * blockDim.x + tx;
+    const int totalThreads = blockDim.x * blockDim.y;
     
+    // Global indices
+    const int row = blockIdx.x * TILE_M + tx;
+    const int col = blockIdx.y * TILE_N + ty;
+    
+    // Accumulator for the dot product
     float sum = 0.0f;
     
-    int tid = threadIdx.y * blockDim.x + threadIdx.x;
-    int totalThreads = blockDim.x * blockDim.y;
-    
-    int current_buffer = 0;
-    
-    if (chunk_start < K) {
-        for (int index = tid; index < BLOCK_K * TILE_M; index += totalThreads) {
-            int t = index / TILE_M;
-            int m = index % TILE_M;
-            int global_k = chunk_start + t;
-            int global_m = blockIdx.x * TILE_M + m;
-            As[0][t][m] = (global_k < K && global_m < M) ? __ldg(&A[global_k * M + global_m]) : 0.0f;
-        }
+    // Main loop over K dimension
+    for (int k0 = 0; k0 < K; k0 += BLOCK_K) {
+        // Load tiles from both matrices
+        loadTileA(As, A, k0, M, K, tid, totalThreads);
+        loadTileB(Bs, B, k0, N, K, tid, totalThreads);
         
-        for (int index = tid; index < BLOCK_K * TILE_N; index += totalThreads) {
-            int t = index / TILE_N;
-            int n = index % TILE_N;
-            int global_k = chunk_start + t;
-            int global_n = blockIdx.y * TILE_N + n;
-            Bs[0][t][n] = (global_k < K && global_n < N) ? __ldg(&B[global_k * N + global_n]) : 0.0f;
-        }
-    }
-    
-    __syncthreads();
-    
-    for (int k = chunk_start; k < min(chunk_start + chunk_size, K); k += BLOCK_K) {
-        if (k + BLOCK_K < min(chunk_start + chunk_size, K)) {
-            #pragma unroll
-            for (int index = tid; index < BLOCK_K * TILE_M; index += totalThreads) {
-                int t = index / TILE_M;
-                int m = index % TILE_M;
-                int global_k = k + BLOCK_K + t;
-                int global_m = blockIdx.x * TILE_M + m;
-                As[1-current_buffer][t][m] = (global_k < K && global_m < M) ? 
-                    __ldg(&A[global_k * M + global_m]) : 0.0f;
-            }
-            
-            #pragma unroll
-            for (int index = tid; index < BLOCK_K * TILE_N; index += totalThreads) {
-                int t = index / TILE_N;
-                int n = index % TILE_N;
-                int global_k = k + BLOCK_K + t;
-                int global_n = blockIdx.y * TILE_N + n;
-                Bs[1-current_buffer][t][n] = (global_k < K && global_n < N) ? 
-                    __ldg(&B[global_k * N + global_n]) : 0.0f;
-            }
-        }
+        __syncthreads();
         
-        #pragma unroll 8
-        for (int t = 0; t < BLOCK_K; t++) {
-            sum += As[current_buffer][t][threadIdx.x] * Bs[current_buffer][t][threadIdx.y];
-        }
+        // Compute partial dot product for this tile
+        sum += computeDotProduct(As, Bs, tx, ty);
         
-        current_buffer = 1 - current_buffer;
         __syncthreads();
     }
     
+    // Store result
     if (row < M && col < N) {
-        atomicAdd(&C[row * N + col], sum);
+        C[row * N + col] = sum;
     }
 }
 
@@ -103,24 +108,8 @@ torch::Tensor forward(torch::Tensor A, torch::Tensor B) {
     dim3 block(TILE_M, TILE_N);
     dim3 grid((M + TILE_M - 1) / TILE_M, (N + TILE_N - 1) / TILE_N);
 
-    cudaStream_t streams[NUM_STREAMS];
-    for (int i = 0; i < NUM_STREAMS; i++) {
-        cudaStreamCreate(&streams[i]);
-    }
-
-    int chunk_size = (K + NUM_STREAMS - 1) / NUM_STREAMS;
+    modularMatMulKernel<<<grid, block>>>(A_ptr, B_ptr, C_ptr, K, M, N);
     
-    for (int i = 0; i < NUM_STREAMS; i++) {
-        int chunk_start = i * chunk_size;
-        pipelinedMatMulKernel<<<grid, block, 0, streams[i]>>>(
-            A_ptr, B_ptr, C_ptr, K, M, N, chunk_start, chunk_size);
-    }
-
-    for (int i = 0; i < NUM_STREAMS; i++) {
-        cudaStreamSynchronize(streams[i]);
-        cudaStreamDestroy(streams[i]);
-    }
-
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
         throw std::runtime_error(cudaGetErrorString(err));
@@ -130,5 +119,5 @@ torch::Tensor forward(torch::Tensor A, torch::Tensor B) {
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("forward", &forward, "Pipelined matrix multiplication (CUDA)");
+    m.def("forward", &forward, "Modular matrix multiplication (CUDA)");
 }

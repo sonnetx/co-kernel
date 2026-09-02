@@ -16,10 +16,10 @@
     "task_id": 1,
     "op_name": "1_Square_matrix_multiplication_",
     "kernel_rank": 1,
-    "kernel_name": "regtile_tiled_matmul_base",
-    "archive_runtime_ms": 1.031,
+    "kernel_name": "uniform_control_tiled_matmul_base_base",
+    "archive_runtime_ms": 1.051,
     "archive_max_diff": "0.001",
-    "code_hash": "5013b2428584"
+    "code_hash": "5f892411a3e9"
   },
   {
     "slug": "1_task3_k0",
@@ -38,10 +38,10 @@
     "task_id": 3,
     "op_name": "3_Batched_matrix_multiplication",
     "kernel_rank": 1,
-    "kernel_name": "optimized_bmm_kernel_base",
-    "archive_runtime_ms": 0.513,
+    "kernel_name": "bmm_stream_overlap_base_base",
+    "archive_runtime_ms": 0.546,
     "archive_max_diff": "0.0",
-    "code_hash": "54d7ed78cfb2"
+    "code_hash": "852f35e20041"
   },
   {
     "slug": "1_task23_k0",
@@ -60,10 +60,10 @@
     "task_id": 23,
     "op_name": "23_Softmax",
     "kernel_rank": 1,
-    "kernel_name": "coalesced_memory_access_softmax_base",
-    "archive_runtime_ms": 0.011,
+    "kernel_name": "minimal_sync_softmax_base",
+    "archive_runtime_ms": 0.013,
     "archive_max_diff": "0.0",
-    "code_hash": "8ee18a6779c2"
+    "code_hash": "a4f2ac18b7bc"
   },
   {
     "slug": "1_task4_k0",
@@ -82,10 +82,10 @@
     "task_id": 4,
     "op_name": "4_Matrix_vector_multiplication_",
     "kernel_rank": 1,
-    "kernel_name": "coalesced_warp_matvec_v2_edit_1",
-    "archive_runtime_ms": 0.066,
+    "kernel_name": "ldg_aligned_matvec_mul_base",
+    "archive_runtime_ms": 0.081,
     "archive_max_diff": "0.001",
-    "code_hash": "a844c016d27e"
+    "code_hash": "5b79bd28241a"
   },
   {
     "slug": "1_task16_k0",
@@ -104,10 +104,10 @@
     "task_id": 16,
     "op_name": "16_Matmul_with_transposed_A",
     "kernel_rank": 1,
-    "kernel_name": "pipelined_tiled_matmul_base_base",
-    "archive_runtime_ms": 2.702,
-    "archive_max_diff": "0.0",
-    "code_hash": "8ea831710e3c"
+    "kernel_name": "modular_tiled_matmul_base_base",
+    "archive_runtime_ms": 2.766,
+    "archive_max_diff": "0.001",
+    "code_hash": "660bd9473de7"
   },
   {
     "slug": "1_task98_k0",
@@ -126,9 +126,9 @@
     "task_id": 98,
     "op_name": "98_KLDivLoss",
     "kernel_rank": 1,
-    "kernel_name": "adaptive_kl_div_cuda_base",
-    "archive_runtime_ms": 0.012,
-    "archive_max_diff": "0.003",
-    "code_hash": "ec189b9b0051"
+    "kernel_name": "kldiv_unrolled_vectorized_base_base",
+    "archive_runtime_ms": 0.013,
+    "archive_max_diff": "0.001",
+    "code_hash": "586419c7c9de"
   }
 ]

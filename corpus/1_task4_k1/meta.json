@@ -3,8 +3,8 @@
   "task_id": 4,
   "op_name": "4_Matrix_vector_multiplication_",
   "kernel_rank": 1,
-  "kernel_name": "coalesced_warp_matvec_v2_edit_1",
-  "archive_runtime_ms": 0.066,
+  "kernel_name": "ldg_aligned_matvec_mul_base",
+  "archive_runtime_ms": 0.081,
   "archive_max_diff": "0.001",
-  "code_hash": "a844c016d27e"
+  "code_hash": "5b79bd28241a"
 }
