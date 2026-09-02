@@ -162,10 +162,16 @@ def time_forward(
     warmup: int = 10,
     clock_monitor: ClockMonitor | None = None,
 ) -> TimingResult:
+    # NB: never torch.cuda.synchronize() here — that is cudaDeviceSynchronize,
+    # which waits on ALL streams, including the pressure kernel that only
+    # terminates when told to stop. Event.synchronize waits on the candidate
+    # stream alone.
     with torch.no_grad():
         for _ in range(warmup):
             candidate.forward(*inputs)
-        torch.cuda.synchronize()
+        fence = torch.cuda.Event()
+        fence.record()
+        fence.synchronize()
         clocks = [clock_monitor.sample()] if clock_monitor else []
         times: list[float] = []
         t0 = time.perf_counter()
@@ -176,7 +182,7 @@ def time_forward(
             start.record()
             candidate.forward(*inputs)
             end.record()
-            torch.cuda.synchronize()
+            end.synchronize()
             times.append(start.elapsed_time(end))
         wall = time.perf_counter() - t0
         if clock_monitor:
