@@ -17,7 +17,10 @@ set -uo pipefail
 : "${COKERNEL_MODULES:=python/3.12.1 cuda/12.4.0 gcc/12.4.0}"
 : "${COKERNEL_VENV:=/scratch/groups/roxanad/sonnet/co-kernel/venv}"
 : "${COKERNEL_SCRATCH:=/scratch/groups/roxanad/sonnet/co-kernel}"
-: "${COKERNEL_REPO:=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+# SLURM copies this script to a spool directory, so BASH_SOURCE does not point
+# into the repo. SLURM_SUBMIT_DIR is where sbatch was invoked, which is the
+# repo root by convention here; the fallback covers running the file directly.
+: "${COKERNEL_REPO:=${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}}"
 
 ml ${COKERNEL_MODULES}
 
