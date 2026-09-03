@@ -24,6 +24,7 @@ print = functools.partial(print, flush=True)  # noqa: A001
 import torch  # noqa: E402
 
 from cokernel import harness  # noqa: E402
+from cokernel.corunner import SyntheticPressure  # noqa: E402
 
 
 def main() -> int:
@@ -37,6 +38,7 @@ def main() -> int:
     ap.add_argument("--levels", type=int, nargs="+", default=[32, 96, 240])
     ap.add_argument("--blocks-per-sm", type=int, default=1)
     ap.add_argument("--pressure-threads", type=int, default=256)
+    ap.add_argument("--pressure-smem-bytes", type=int, default=0)
     args = ap.parse_args()
 
     os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "9.0")
@@ -50,7 +52,15 @@ def main() -> int:
 
     dump("started")  # so a hard kill leaves evidence of where we died
 
-    pressure = harness.build_pressure(REPO / "cokernel" / "csrc", args.build_dir / "pressure")
+    corunner = SyntheticPressure(
+        csrc_dir=REPO / "cokernel" / "csrc",
+        build_dir=args.build_dir / "pressure",
+        blocks_per_sm=args.blocks_per_sm,
+        threads=args.pressure_threads,
+        smem_bytes=args.pressure_smem_bytes,
+        levels=args.levels,
+    )
+    rec["corunner"] = corunner.describe()
     kdir = args.corpus / args.slug
     try:
         cand = harness.build_candidate(
@@ -71,10 +81,7 @@ def main() -> int:
     clock_monitor = harness.ClockMonitor()
     flush_buf = torch.empty(harness.L2_FLUSH_BYTES // 4, dtype=torch.float32, device="cuda")
     rec["conditions"] = harness.run_conditions(
-        cand, ref_mod, pressure, flush_buf,
-        pressure_levels=args.levels,
-        blocks_per_sm=args.blocks_per_sm,
-        pressure_threads=args.pressure_threads,
+        cand, ref_mod, corunner, flush_buf,
         n_iter=args.n_iter,
         warmup=args.warmup,
         clock_monitor=clock_monitor,

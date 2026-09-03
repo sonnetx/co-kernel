@@ -1,47 +1,155 @@
 # co-kernel
 
-Do agent-generated GPU kernels keep their performance rankings under co-location? Kernels are selected and leaderboarded in isolation, but deployed GPUs are shared. If the isolated winner loses when a neighbor occupies registers, shared memory, or bandwidth, then every leaderboard and autotuner that picks kernels in isolation is optimizing the wrong objective.
+Do GPU kernel rankings survive co-location?
 
-## Day-one experiment
+Kernel-generation benchmarks rank candidate kernels by latency on an idle
+device, and autotuners select kernels the same way. Production accelerators are
+shared. This harness measures what happens to a ranking when something else is
+using the GPU.
 
-A falsification check before the full build. Ten agent-generated kernels (5 KernelBench tasks, top-2 correct kernels per task from the [Sakana AI CUDA Engineer archive](https://huggingface.co/datasets/SakanaAI/AI-CUDA-Engineer-Archive)), each timed isolated and under a synthetic co-runner at three register-pressure levels, on one H100. The binary question is whether any task's top-1 kernel flips under pressure. One flip justifies the full study. Thirty null results within noise mean the effect is absent at this occupancy regime, and the next check is whether the isolated kernels were occupancy-saturated to begin with.
+On one H100 it found an inversion. Two verified agent-generated kernels for the
+same matrix-vector problem swap places under co-location: the one that is 23.8%
+faster in isolation ends up 9.6% slower when a neighbor holds half the register
+file, because the two degrade by different factors (2.15x against 1.58x). The
+writeup is in [results/day_one_report.md](results/day_one_report.md).
 
-### Sharing mechanism
+## What it does
 
-Two CUDA streams in one process. The candidate runs on the legacy default stream (archive kernels launch with plain `<<<>>>`, which lands there). The co-runner runs on a `cudaStreamNonBlocking` stream, which the legacy default stream does not synchronize with, so the two co-execute on the same SMs. This is the mechanism experiment; MPS (deployment number) and MIG (falsification control) come later.
+For each candidate kernel, the harness measures latency on an idle device and
+then under a co-runner it controls, re-verifying correctness in the measuring
+process first. It reports per-candidate *fragility*, the ratio of co-located to
+isolated latency, and per-task *inversions*, meaning cases where the isolated
+winner is not the co-located winner.
 
-### Synthetic co-runner
+The default co-runner is synthetic, one persistent block per multiprocessor
+spinning on register-resident arithmetic, with register and shared-memory
+knobs. Its purpose is isolating a resource axis rather than representing a
+workload, and the interface accepts any neighbor you want to supply instead.
 
-`cokernel/csrc/pressure.cu`. One persistent block per SM, 256 threads, spinning on an FMA chain over NREG live accumulators until the host raises a zero-copy stop flag. NREG in {32, 96, 168, 240} sweeps the register-file footprint from ~12% to ~94% of the SM's 64K registers while thread count, and with it FMA issue pressure and thread-slot usage, stays fixed. Actual registers per thread are read back with `cudaFuncGetAttributes` and recorded, not assumed.
+## Requirements
 
-A pressure level that leaves fewer free registers than a candidate block needs starves the candidate completely, since its blocks queue behind pressure blocks that never retire. A watchdog stops the co-runner after a timeout and the pass is recorded as starved rather than timed. Starvation is data (the kernel cannot make progress next to that neighbor at all), and a starved pass ranks last in the flip analysis.
-
-### Timing
-
-CUDA events around each forward call, 100 iterations, one 256 MB L2 flush before every timed iteration (matching SOL-ExecBench and KernelBench methodology), device synchronize per iteration, warmup excluded. The co-runner launches, then the harness sleeps 250 ms before the first timed iteration so the whole measurement window sits inside the co-runner's steady state. Wall time per pass is recorded next to the event sum, so a kernel whose work escapes the timed stream shows up as a discrepancy.
-
-### Correctness
-
-Every kernel is re-verified in-process before timing (three trials, fresh seeds, `allclose` at the KernelBench tolerance of 1e-2), because the archive's own screening is known to have missed reward hacks and because our streams setup relaxes assumptions the archive's harness made. Kernels that fail verification or fail to build are dropped and reported.
-
-### Known compromises (day-one only)
-
-- Clocks are not locked (no root on the cluster). SM clock is sampled before and after each pass via NVML and recorded, so DVFS-confounded passes are at least visible. The full study needs locked/unlocked runs reported separately.
-- Tasks are restricted to parameter-free references (empty `get_init_inputs`), which keeps the candidate calling convention unambiguous but excludes convs and most fused L2 ops.
-- Single GPU, single run. No MPS, no MIG control yet.
-
-## Corpus note
-
-Neither SOL-ExecBench nor FastKernels ships usable candidate kernels. SOL-ExecBench (B200-targeted) releases problem definitions only; its leaderboard API exposes rankings and latencies but source downloads require auth. FastKernels releases baselines and a runner with an empty candidate slot. The Sakana archive is the one public corpus of real agent-generated kernels with correctness metadata, and it targets exactly the isolated-benchmark regime this project interrogates. Archive runtimes are used only as a pre-ranking; everything is re-measured here.
-
-## Running
+An NVIDIA GPU, a CUDA toolkit, and a PyTorch build matching it. Install torch
+for your CUDA version first, since a mismatch surfaces as a compile error when
+the harness builds its extensions rather than at install time.
 
 ```bash
-# anywhere with network (login node): select kernels, write corpus/
-python scripts/prepare_corpus.py --out corpus
-
-# on Sherlock
-sbatch scripts/slurm_day_one.sh
+pip install torch --index-url https://download.pytorch.org/whl/cu124   # match your toolkit
+pip install -e '.[corpus,clocks]'
 ```
 
-Results land in `results/day_one_<jobid>.json` with per-kernel per-condition timing summaries and a per-task flip analysis.
+Tested on H100 (sm_90) with CUDA 12.4 and torch 2.5.1. Nothing is
+architecture-specific beyond the compile target, which `run_local.sh` reads
+from the driver.
+
+## Quickstart
+
+```bash
+python scripts/prepare_corpus.py --out corpus   # needs network, one time
+./scripts/run_local.sh --quick                  # ~2 min smoke test
+./scripts/run_local.sh                          # full sweep, ~30 min
+```
+
+`--quick` runs few iterations over two kernels at one pressure level. It
+confirms the install works and its timings are not measurements.
+
+Results land in a JSON file carrying, for every candidate and condition, the
+latency distribution summary, clock samples, verification outcome, and the
+co-runner's own description. The file is rewritten after each candidate, so an
+interrupted run keeps everything completed so far.
+
+To run on a cluster, adapt [scripts/slurm/sherlock.sbatch](scripts/slurm/sherlock.sbatch),
+which is a site-specific template rather than a portable script.
+
+## Reading the output
+
+```
+1_task4_k0: ok in 61s | isolated 66.6 us | r32 1.16x | r96 2.15x | r240 no-progress
+...
+=== top-1 flips (isolated winner vs co-located winner) ===
+1_task4    4_Matrix_vector_multiplication_   r32:same  r96:FLIP  r240:no-rank
+```
+
+`r96` names a co-runner level, here 96 live accumulators per thread, which
+compiles to 127 registers per thread. Read achieved register counts from the
+`corunner.reg_info` field of the results rather than the level number, since
+`__launch_bounds__` caps them. `no-progress` means the candidate completed no
+iterations inside the watchdog budget, either through genuine starvation or
+extreme slowdown. `no-rank` means fewer than two candidates for that task
+produced a comparable measurement.
+
+## When a ranking inverts
+
+Writing F(k) for the fragility of candidate k, and taking a faster than b in
+isolation, a loses its lead exactly when
+
+    F(a) / F(b)  >  T_iso(b) / T_iso(a)
+
+The fragility ratio has to exceed the isolated margin. Inversion therefore
+requires the isolated-faster candidate to be the more fragile one, and it gets
+easier as the isolated margin narrows. A large uniform slowdown never inverts
+anything.
+
+The condition has a practical consequence for corpus construction. Selecting
+the two fastest candidates per task, which is the obvious thing to do, produces
+near-duplicate kernels whose fragilities barely differ, and an early run built
+that way found no inversions at all. Selecting the fastest candidate plus the
+most source-dissimilar candidate within a runtime band of it is what surfaced
+the inversion.
+
+## Hacking
+
+| Goal | Where |
+|---|---|
+| Change the register sweep | one list in `cokernel/csrc/pressure.cu` |
+| Sweep shared memory | `--pressure-smem-bytes` |
+| Supply your own neighbor | implement `CoRunner` in `cokernel/corunner.py` |
+| Supply your own kernels | write a corpus directory, [docs/CORPUS.md](docs/CORPUS.md) |
+| Change kernel selection | `cokernel/corpus.py` |
+| Add a metric | read the results JSON, do not modify the measurement path |
+
+[docs/EXTENDING.md](docs/EXTENDING.md) covers each of these.
+[docs/PITFALLS.md](docs/PITFALLS.md) collects the measurement traps this project
+fell into, all of which produced confident wrong numbers, and is worth reading
+before building anything similar.
+
+## Layout
+
+```
+cokernel/
+  csrc/pressure.cu   synthetic co-runner, register and shared-memory knobs
+  corunner.py        CoRunner interface, synthetic and null implementations
+  harness.py         build, verify, time; watchdog and abort handling
+  corpus.py          candidate selection from the public kernel archive
+scripts/
+  run_local.sh       portable single-GPU entry point
+  day_one.py         sweep driver, subprocess isolation, inversion analysis
+  measure_one.py     measures one candidate, run as a subprocess
+  prebuild.py        compile every extension without a GPU, fails fast
+  prepare_corpus.py  build a corpus from the archive
+  slurm/             site-specific job templates
+docs/                corpus format, extension guide, pitfalls
+results/             writeup and archived measurements
+```
+
+Each candidate is measured in its own subprocess under a hard timeout, because
+a kernel that hangs the CUDA context cannot be recovered from inside the
+measuring process, and one such kernel should not cost a whole run.
+
+## Status and limitations
+
+The inversion is an existence proof from a single run, not a rate. The neighbor
+is synthetic. There is no Multi-Process Service configuration, so candidates do
+not yet share a CUDA context the way a real multi-tenant deployment has them
+do, and no MIG configuration, which is the control that would separate
+multiprocessor contention from memory-bandwidth contention. Only fragility is
+measured, never how much a candidate costs its neighbor. Section 6 of the
+[report](results/day_one_report.md) states these in full.
+
+## Data and licensing
+
+Code is Apache-2.0, see [LICENSE](LICENSE). The corpus generator downloads the
+AI CUDA Engineer archive, released separately under CC-BY-4.0, and the
+`corpus/` directory in this repository holds kernels derived from it. That
+archive's correctness screening has documented gaps, which is why this harness
+re-verifies every candidate before timing and why two candidates carrying an
+upstream correct flag fail verification here.

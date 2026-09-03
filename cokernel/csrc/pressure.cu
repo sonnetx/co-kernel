@@ -1,21 +1,35 @@
-// Synthetic co-runner ("pressure") kernel with a register-pressure knob.
+// Synthetic co-runner ("pressure") kernel with register and shared-memory knobs.
 //
 // Design: one persistent block per SM (configurable), each spinning on an FMA
-// chain over NREG live float accumulators until the host raises a stop flag in
-// zero-copy mapped memory. The loop-carried dependence on every accumulator
-// keeps all NREG values live, so register consumption per thread tracks NREG.
-// Thread count is held fixed across register levels, so issue pressure on the
-// FMA pipe and thread-slot occupancy stay constant while the register-file
-// footprint sweeps. That makes the register axis the only thing that moves
-// between pressure levels.
+// chain over NREG live float accumulators until the host raises a stop flag.
+// The loop-carried dependence on every accumulator keeps all NREG values live,
+// so register consumption per thread tracks NREG. Thread count is held fixed
+// across register levels by the caller, so issue pressure on the FMA pipe and
+// thread-slot occupancy stay constant while the register-file footprint
+// sweeps. Comparisons BETWEEN levels therefore isolate the register axis;
+// comparisons between an idle device and any level do not, since the neighbor
+// also consumes issue slots and cache.
 //
-// The stop flag lives in DEVICE memory (an L2 hit for the spinning kernel;
-// a mapped-host flag turns 33K threads into a PCIe read flood that distorts
-// the memory subsystem far beyond the intended contention). The host raises
-// it with cudaMemcpyAsync from pinned memory on a dedicated non-blocking
-// copy stream: the copy engine executes regardless of SM starvation, so the
-// stop path cannot deadlock behind starved kernels. The flag is checked once
-// per outer loop (~1024*NREG FMAs), tens of microseconds at H100 clocks.
+// Shared memory is a second, independent axis, requested as dynamic shared
+// memory at launch. Dynamic shared memory is reserved by the launch parameter
+// whether or not the kernel reads it, so it constrains occupancy regardless;
+// we touch one element anyway to keep the intent legible and defeat any
+// future compiler cleverness.
+//
+// The stop flag lives in DEVICE memory (an L2 hit for the spinning kernel; a
+// mapped-host flag turns 33K threads into a PCIe read flood that distorts the
+// memory subsystem far beyond the intended contention, slowing every
+// co-located kernel a uniform 500-770x). The host raises it with
+// cudaMemcpyAsync from pinned memory on a dedicated non-blocking copy stream:
+// the copy engine executes regardless of SM starvation, so the stop path
+// cannot deadlock behind starved kernels. The flag is checked once per outer
+// loop (~1024*NREG FMAs), tens of microseconds at H100 clocks.
+//
+// HACKING: to change the register sweep, edit COKERNEL_PRESSURE_LEVELS below.
+// Both the launch dispatch and the reported attribute table are generated from
+// that one list, and Python reads the compiled levels back via levels(), so
+// nothing else needs to change. Each level costs one template instantiation of
+// compile time.
 
 #include <torch/extension.h>
 
@@ -23,6 +37,17 @@
 #include <cuda_runtime.h>
 
 #include <vector>
+
+// Register-pressure levels, in live accumulators per thread. Add or remove a
+// line to change the sweep. On H100 with 256 threads/block these compile to
+// 40, 127, 255, and 255 registers per thread respectively; __launch_bounds__
+// caps the achieved count at 255, so levels above ~168 are indistinguishable.
+// Query the achieved counts with reg_info() rather than assuming them.
+#define COKERNEL_PRESSURE_LEVELS(X) \
+  X(32)                             \
+  X(96)                             \
+  X(168)                            \
+  X(240)
 
 #define CUDA_OK(expr)                                                       \
   do {                                                                      \
@@ -41,11 +66,20 @@ bool active = false;
 
 template <int NREG>
 __global__ void __launch_bounds__(256, 1)
-    pressure_kernel(const volatile int* stop, float* sink, float seed) {
+    pressure_kernel(const volatile int* stop, float* sink, float seed,
+                    int smem_floats) {
+  extern __shared__ float smem[];
   float acc[NREG];
 #pragma unroll
   for (int i = 0; i < NREG; ++i) {
     acc[i] = seed + static_cast<float>(i) + static_cast<float>(threadIdx.x);
+  }
+  // Touch the requested shared memory once so the request is unambiguously
+  // live. Occupancy is constrained by the launch parameter either way.
+  if (smem_floats > 0) {
+    for (int i = threadIdx.x; i < smem_floats; i += blockDim.x) smem[i] = 1.0f;
+    __syncthreads();
+    acc[0] += smem[threadIdx.x % smem_floats];
   }
   while (*stop == 0) {
 #pragma unroll 1
@@ -87,44 +121,59 @@ int num_sms() {
   return sms;
 }
 
-// (nreg_level, actual regs/thread, shared bytes, local bytes) per instantiation.
-std::vector<std::vector<int64_t>> reg_info() {
-  std::vector<std::vector<int64_t>> out;
-  cudaFuncAttributes attr;
-  CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<32>));
-  out.push_back({32, attr.numRegs, (int64_t)attr.sharedSizeBytes, (int64_t)attr.localSizeBytes});
-  CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<96>));
-  out.push_back({96, attr.numRegs, (int64_t)attr.sharedSizeBytes, (int64_t)attr.localSizeBytes});
-  CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<168>));
-  out.push_back({168, attr.numRegs, (int64_t)attr.sharedSizeBytes, (int64_t)attr.localSizeBytes});
-  CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<240>));
-  out.push_back({240, attr.numRegs, (int64_t)attr.sharedSizeBytes, (int64_t)attr.localSizeBytes});
+// The register levels this build supports, so Python need not duplicate them.
+std::vector<int64_t> levels() {
+  std::vector<int64_t> out;
+#define COKERNEL_ONE_LEVEL(N) out.push_back(N);
+  COKERNEL_PRESSURE_LEVELS(COKERNEL_ONE_LEVEL)
+#undef COKERNEL_ONE_LEVEL
   return out;
 }
 
-void start(int64_t nreg, int64_t blocks_per_sm, int64_t threads) {
+// (nreg level, achieved regs/thread, static smem bytes, local bytes) per level.
+std::vector<std::vector<int64_t>> reg_info() {
+  std::vector<std::vector<int64_t>> out;
+  cudaFuncAttributes attr;
+#define COKERNEL_ONE_INFO(N)                                              \
+  CUDA_OK(cudaFuncGetAttributes(&attr, pressure_kernel<N>));               \
+  out.push_back({N, attr.numRegs, (int64_t)attr.sharedSizeBytes,           \
+                 (int64_t)attr.localSizeBytes});
+  COKERNEL_PRESSURE_LEVELS(COKERNEL_ONE_INFO)
+#undef COKERNEL_ONE_INFO
+  return out;
+}
+
+void start(int64_t nreg, int64_t blocks_per_sm, int64_t threads,
+           int64_t smem_bytes) {
   ensure_state();
   TORCH_CHECK(!active, "pressure kernel already running");
   TORCH_CHECK(threads > 0 && threads <= 256, "threads must be in (0, 256]");
+  TORCH_CHECK(smem_bytes >= 0, "smem_bytes must be non-negative");
   set_flag(0);
   dim3 grid(num_sms() * (int)blocks_per_sm);
   dim3 block((int)threads);
-  switch (nreg) {
-    case 32:
-      pressure_kernel<32><<<grid, block, 0, pressure_stream>>>(d_stop, d_sink, 0.5f);
-      break;
-    case 96:
-      pressure_kernel<96><<<grid, block, 0, pressure_stream>>>(d_stop, d_sink, 0.5f);
-      break;
-    case 168:
-      pressure_kernel<168><<<grid, block, 0, pressure_stream>>>(d_stop, d_sink, 0.5f);
-      break;
-    case 240:
-      pressure_kernel<240><<<grid, block, 0, pressure_stream>>>(d_stop, d_sink, 0.5f);
-      break;
-    default:
-      TORCH_CHECK(false, "nreg must be one of 32, 96, 168, 240");
+  int smem = (int)smem_bytes;
+  int smem_floats = smem / (int)sizeof(float);
+  bool launched = false;
+
+#define COKERNEL_ONE_LAUNCH(N)                                                \
+  if (!launched && nreg == N) {                                               \
+    /* Dynamic shared memory above 48 KB requires explicit opt-in. */         \
+    if (smem > 48 * 1024) {                                                   \
+      CUDA_OK(cudaFuncSetAttribute(                                           \
+          pressure_kernel<N>, cudaFuncAttributeMaxDynamicSharedMemorySize,    \
+          smem));                                                             \
+    }                                                                         \
+    pressure_kernel<N><<<grid, block, smem, pressure_stream>>>(               \
+        d_stop, d_sink, 0.5f, smem_floats);                                   \
+    launched = true;                                                          \
   }
+  COKERNEL_PRESSURE_LEVELS(COKERNEL_ONE_LAUNCH)
+#undef COKERNEL_ONE_LAUNCH
+
+  TORCH_CHECK(launched, "nreg ", nreg,
+              " is not a compiled pressure level; add it to "
+              "COKERNEL_PRESSURE_LEVELS in pressure.cu and rebuild");
   CUDA_OK(cudaGetLastError());
   active = true;
 }
@@ -141,10 +190,15 @@ bool running() { return active; }
 }  // namespace
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("start", &start, "Launch pressure kernel (nreg, blocks_per_sm, threads)");
+  m.def("start", &start,
+        "Launch pressure kernel (nreg, blocks_per_sm, threads, smem_bytes)",
+        pybind11::arg("nreg"), pybind11::arg("blocks_per_sm") = 1,
+        pybind11::arg("threads") = 256, pybind11::arg("smem_bytes") = 0);
   m.def("stop", &stop, "Stop pressure kernel and synchronize");
   m.def("running", &running, "Whether the pressure kernel is active");
   m.def("num_sms", &num_sms, "SM count of device 0");
+  m.def("levels", &levels, "Register levels compiled into this build");
   m.def("reg_info", &reg_info,
-        "Per-level (nreg, regs/thread, smem, local) from cudaFuncGetAttributes");
+        "Per-level (nreg, regs/thread, static smem, local) from "
+        "cudaFuncGetAttributes");
 }

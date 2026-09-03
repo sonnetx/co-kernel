@@ -60,6 +60,12 @@ def build_candidate(kernel_cu: Path, build_dir: Path, name: str):
 
 
 def build_pressure(csrc_dir: Path, build_dir: Path):
+    """Compile the synthetic pressure extension.
+
+    Retained for the prebuild smoke test. Measurement code should construct a
+    cokernel.corunner.SyntheticPressure instead, which owns the same extension
+    and exposes it through the CoRunner interface.
+    """
     from torch.utils.cpp_extension import load
 
     build_dir.mkdir(parents=True, exist_ok=True)
@@ -209,39 +215,45 @@ def time_forward(
 def run_conditions(
     candidate,
     ref_mod,
-    pressure,
+    corunner,
     flush_buf: torch.Tensor,
-    pressure_levels: list[int],
-    blocks_per_sm: int = 1,
-    pressure_threads: int = 256,
+    levels: list | None = None,
     n_iter: int = 100,
     warmup: int = 10,
     steady_state_s: float = 0.25,
     clock_monitor: ClockMonitor | None = None,
+    min_timeout_s: float = 60.0,
 ) -> dict[str, dict]:
-    """Time one candidate isolated and under each pressure level."""
+    """Time one candidate on an idle device and under each co-runner level.
+
+    `corunner` is any object satisfying cokernel.corunner.CoRunner. Result keys
+    are "isolated" plus one per level, named by `corunner.label(level)`.
+    """
     torch.manual_seed(7)
     inputs = [t.cuda() if isinstance(t, torch.Tensor) else t for t in ref_mod.get_inputs()]
     out: dict[str, dict] = {}
+    if levels is None:
+        levels = corunner.levels()
 
     print("  condition: isolated", flush=True)
     res = time_forward(candidate, inputs, flush_buf, n_iter, warmup, clock_monitor)
     out["isolated"] = res.summary()
 
-    # A pressure level that leaves too few registers per SM starves the
-    # candidate outright: its blocks queue behind the never-retiring pressure
-    # blocks. The watchdog stops the co-runner after a timeout, which unblocks
-    # the device, and the pass is recorded as starved instead of timed.
-    timeout_s = max(60.0, 20.0 * res.wall_s)
+    # A co-runner that leaves too few resources for a candidate block starves
+    # the candidate outright: its blocks queue behind neighbor blocks that
+    # never retire. The watchdog stops the co-runner after a timeout, which
+    # unblocks the device, and the pass is recorded rather than hanging.
+    timeout_s = max(min_timeout_s, 20.0 * res.wall_s)
 
-    for nreg in pressure_levels:
-        print(f"  condition: pressure_r{nreg} (watchdog {timeout_s:.0f}s)", flush=True)
-        pressure.start(nreg, blocks_per_sm, pressure_threads)
+    for level in levels:
+        key = corunner.label(level)
+        print(f"  condition: {key} (watchdog {timeout_s:.0f}s)", flush=True)
+        corunner.start(level)
         fired = threading.Event()
 
         def _rescue():
             fired.set()
-            pressure.stop()
+            corunner.stop()
 
         watchdog = threading.Timer(timeout_s, _rescue)
         try:
@@ -252,19 +264,18 @@ def run_conditions(
             )
         finally:
             watchdog.cancel()
-            pressure.stop()
+            corunner.stop()
         if fired.is_set():
-            # Iterations completed before the rescue ran fully under pressure
-            # and are valid co-located samples; zero completions is genuine
-            # starvation.
+            # Iterations completed before the rescue ran fully co-located and
+            # are valid samples; zero completions means no progress at all.
             if res.times_ms:
                 cond = res.summary()
                 cond.update({"aborted": True, "timeout_s": timeout_s})
             else:
                 cond = {"starved": True, "timeout_s": timeout_s}
-            out[f"pressure_r{nreg}"] = cond
+            out[key] = cond
         else:
-            out[f"pressure_r{nreg}"] = res.summary()
+            out[key] = res.summary()
         time.sleep(0.05)
     return out
 

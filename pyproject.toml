@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cokernel"
+version = "0.1.0"
+description = "Measure whether GPU kernel rankings survive co-location"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = [
+    # torch is deliberately unpinned here: install the build matching your CUDA
+    # toolkit first (see README), since a mismatch fails at extension compile
+    # time rather than at install time.
+    "torch>=2.1",
+    "ninja",          # required by torch.utils.cpp_extension
+]
+
+[project.optional-dependencies]
+# Only needed to build a corpus from the public kernel archive. Running a
+# corpus that already exists on disk needs neither.
+corpus = ["pandas>=2.0", "pyarrow>=14", "huggingface_hub>=0.20"]
+# Clock sampling. Absent, the harness records -1 for clocks and carries on.
+clocks = ["pynvml"]
+
+[project.scripts]
+cokernel-day-one = "cokernel.cli:day_one"
+cokernel-corpus = "cokernel.cli:prepare_corpus"
+cokernel-prebuild = "cokernel.cli:prebuild"
+
+[tool.setuptools]
+packages = ["cokernel"]
+
+[tool.setuptools.package-data]
+cokernel = ["csrc/*.cu"]
