@@ -45,11 +45,16 @@ alongside these:
 | 4 | Matrix-vector | 66.6 us | 82.4 us | 1.2x / 1.1x | **flip** | starved |
 | 16 | Matmul (A^T) | 2472 us | 2982 us | 2.6x / starved | 6.5x / starved | starved |
 
-Square matmul (task 1) starves even at the lowest pressure: its blocks need so
-many registers that 40 regs/thread of co-runner already denies residency. In
-task 16 the two kernels diverge sharply, k0 survives r40 and r127 while k1 is
-starved at every level, which is differential fragility extreme enough that k1
-is unrankable rather than merely slower. Both KLDiv kernels (task 98) failed
+Square matmul (task 1) makes no progress even at the lowest pressure, which a
+simple residency calculation does not predict for its 256-thread blocks, so
+something beyond register headroom is operating there and we have not
+identified it. In task 16 the two kernels diverge sharply, k0 survives r40 and
+r127 while k1 makes no progress at any level, which is differential fragility
+extreme enough that k1 is unrankable rather than merely slower.
+
+A `starved` cell means zero iterations completed inside the 60 s watchdog
+budget. That covers both true starvation (blocks never resident) and any
+slowdown past roughly 5000x; the harness cannot currently distinguish them. Both KLDiv kernels (task 98) failed
 in-harness verification (candidate returns shape [1], reference []); the archive
 marked them correct, so the harness shape check is stricter than the archive's,
 a corpus-hygiene note for the full study rather than a co-location finding. One
