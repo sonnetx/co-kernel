@@ -41,6 +41,10 @@ Tested on H100 (sm_90) with CUDA 12.4 and torch 2.5.1. Nothing is
 architecture-specific beyond the compile target, which `run_local.sh` reads
 from the driver.
 
+Check an install with `./scripts/validate.sh`, which compiles every extension
+and then measures two kernels. The compile step needs a CUDA toolkit but no
+GPU, so `--build-only` works on a login node or a CPU-only machine.
+
 ## Quickstart
 
 ```bash
