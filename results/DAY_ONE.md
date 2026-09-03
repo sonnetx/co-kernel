@@ -9,18 +9,58 @@ co-execution on one H100 80GB.
 
 ## Verdict
 
-The mechanism is real and measurable: co-location produces graded,
-register-dependent, kernel-specific slowdown, and at the highest pressure it
-starves candidates outright. Across the kernel pairs that could be ranked, no
-task's isolated top-1 kernel lost its lead under pressure (zero top-1 flips).
-The full run that motivates a larger study is the diverse-corpus run tracked in
-`results/day_one_*.json`; the runs below record how the harness got to a
-trustworthy measurement.
+The effect is real: co-located register pressure inverted a task's top-1
+kernel. In the diverse-corpus run (`results/run4_41757499/`), the
+matrix-vector task's isolated winner lost its lead under medium pressure. One
+flip in a six-task sample justifies the full study.
 
-## What the runs showed
+The mechanism behind it is graded, register-dependent, and kernel-specific
+slowdown, with outright starvation at the highest pressure. A flip happens when
+the isolated-faster kernel is also the more fragile one and the fragility gap
+exceeds the isolated margin.
+
+### The flip (task 4, matrix-vector multiply, r96 = 127 regs/thread)
+
+| kernel | isolated | under r96 | slowdown |
+|--------|----------|-----------|----------|
+| k0 | **66.6 us** (winner) | 143.0 us | 2.15x |
+| k1 | 82.4 us | **130.5 us** (winner) | 1.58x |
+
+Isolated, k0 leads by 24%. Under pressure k0 degrades 2.15x but k1 only 1.58x,
+so k1 finishes 10% ahead. The distributions do not overlap (k0 r96 p10-p90
+142.1 to 143.5 us; k1 129.7 to 131.3 us), 100 iterations each, no partial
+windows. An autotuner or leaderboard selecting k0 in isolation would ship the
+slower kernel for any co-located deployment at this pressure.
+
+## The rest of the diverse-corpus run
+
+Run 4 (`results/run4_41757499/`, 12 kernels, subprocess-isolated) held the flip
+alongside these:
+
+| task | op | iso k0 | iso k1 | r40 | r127 | r255 |
+|------|----|--------|--------|-----|------|------|
+| 1 | Square matmul | 1090 us | 1141 us | both starved | both starved | starved |
+| 3 | Batched matmul | 540 us | (hung) | 4.1x | 9.8x | starved |
+| 23 | Softmax | 12.5 us | 15.4 us | 1.9x / 2.1x | 3.9x / 4.4x | starved |
+| 4 | Matrix-vector | 66.6 us | 82.4 us | 1.2x / 1.1x | **flip** | starved |
+| 16 | Matmul (A^T) | 2472 us | 2982 us | 2.6x / starved | 6.5x / starved | starved |
+
+Square matmul (task 1) starves even at the lowest pressure: its blocks need so
+many registers that 40 regs/thread of co-runner already denies residency. In
+task 16 the two kernels diverge sharply, k0 survives r40 and r127 while k1 is
+starved at every level, which is differential fragility extreme enough that k1
+is unrankable rather than merely slower. Both KLDiv kernels (task 98) failed
+in-harness verification (candidate returns shape [1], reference []); the archive
+marked them correct, so the harness shape check is stricter than the archive's,
+a corpus-hygiene note for the full study rather than a co-location finding. One
+task-3 kernel hung the context and was killed by its subprocess budget without
+taking the run down, which is the isolation working as intended.
+
+## What the earlier runs showed
 
 Run 3 (fixed co-runner, near-tied corpus, `results/run3_41734728/`) gave clean,
-interpretable numbers:
+interpretable numbers but no flip, because top-2-by-runtime kernels differ under
+1% isolated and their faster member was also the more robust one:
 
 | task | op | iso k0 | iso k1 | r40 slowdown | r127 slowdown | r255 |
 |------|----|--------|--------|--------------|---------------|------|
@@ -29,14 +69,14 @@ interpretable numbers:
 | 4 | Matrix-vector | 67 us | 66 us | 1.2x | 2.1x | starved |
 | 16 | Matmul (A^T) | 2473 us | (hung) | 2.6x, 6.5x | | starved |
 
-Two observations. Slowdown under co-location depends strongly on the kernel's
-own character: the compute-bound batched matmul suffers 4 to 10x from register
-contention, while the bandwidth-bound matrix-vector kernel, already
-register-light, loses only 1.2 to 2.1x. And within each task the isolated-faster
-kernel was also the less fragile one, so co-location widened the gap rather than
-closing it, which is the opposite of a flip. The near-tied corpus (top-2 by
-runtime differ under 1%) is the wrong instrument for finding flips, motivating
-the diverse-corpus selection.
+Slowdown under co-location depends strongly on the kernel's own character: the
+compute-bound batched matmul suffers 4 to 10x from register contention, while
+the bandwidth-bound matrix-vector kernel, already register-light, loses only 1.2
+to 2.1x. In run 3's near-tied pairs the isolated-faster kernel was also the less
+fragile one, so co-location widened the gap rather than closing it. Selecting
+source-diverse kernels within a runtime band (run 4) rather than near-identical
+top-2 exposed the case where fragility and isolated speed disagree, which is the
+flip above.
 
 ## Harness lessons (documented so the full study inherits them)
 

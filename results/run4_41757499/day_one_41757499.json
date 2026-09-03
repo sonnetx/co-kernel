@@ -1,0 +1,929 @@
+{
+  "env": {
+    "gpu": "NVIDIA H100 80GB HBM3",
+    "torch": "2.5.1+cu124",
+    "cuda": "12.4",
+    "hostname": "sh04-03n05.int",
+    "time": "2026-09-02T14:28:43",
+    "n_iter": 100,
+    "levels": [
+      32,
+      96,
+      240
+    ],
+    "blocks_per_sm": 1,
+    "pressure_threads": 256
+  },
+  "kernels": {
+    "1_task1_k0": {
+      "meta": {
+        "slug": "1_task1_k0",
+        "level": "1",
+        "task_id": 1,
+        "op_name": "1_Square_matrix_multiplication_",
+        "kernel_rank": 0,
+        "kernel_name": "regtile_2x2_optimized_sync_edit_1",
+        "archive_runtime_ms": 1.007,
+        "archive_max_diff": "0.001",
+        "code_hash": "400e170d8a41"
+      },
+      "status": "ok",
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 1.0900320410728455,
+          "mean_ms": 1.0900588762760162,
+          "p10_ms": 1.0882879495620728,
+          "p90_ms": 1.0920319557189941,
+          "min_ms": 1.0864959955215454,
+          "max_ms": 1.0939199924468994,
+          "event_total_ms": 109.00588762760162,
+          "wall_s": 0.11931795900454745,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r96": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      }
+    },
+    "1_task1_k1": {
+      "meta": {
+        "slug": "1_task1_k1",
+        "level": "1",
+        "task_id": 1,
+        "op_name": "1_Square_matrix_multiplication_",
+        "kernel_rank": 1,
+        "kernel_name": "uniform_control_tiled_matmul_base_base",
+        "archive_runtime_ms": 1.051,
+        "archive_max_diff": "0.001",
+        "code_hash": "5f892411a3e9"
+      },
+      "status": "ok",
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 1.140720009803772,
+          "mean_ms": 1.1407743978500366,
+          "p10_ms": 1.1397759914398193,
+          "p90_ms": 1.1418559551239014,
+          "min_ms": 1.13811194896698,
+          "max_ms": 1.143455982208252,
+          "event_total_ms": 114.07743978500366,
+          "wall_s": 0.12337780800589826,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r96": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      }
+    },
+    "1_task3_k0": {
+      "meta": {
+        "slug": "1_task3_k0",
+        "level": "1",
+        "task_id": 3,
+        "op_name": "3_Batched_matrix_multiplication",
+        "kernel_rank": 0,
+        "kernel_name": "bmm_tiled_shared_memory_optimized_edit_1",
+        "archive_runtime_ms": 0.511,
+        "archive_max_diff": "0.0",
+        "code_hash": "13f05e62704d"
+      },
+      "status": "ok",
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.5396479964256287,
+          "mean_ms": 0.539648003578186,
+          "p10_ms": 0.5385280251502991,
+          "p90_ms": 0.5405439734458923,
+          "min_ms": 0.5379520058631897,
+          "max_ms": 0.5424000024795532,
+          "event_total_ms": 53.9648003578186,
+          "wall_s": 0.06326058300328441,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 2.2192639112472534,
+          "mean_ms": 2.2192563152313234,
+          "p10_ms": 2.218048095703125,
+          "p90_ms": 2.2205440998077393,
+          "min_ms": 2.217087984085083,
+          "max_ms": 2.221440076828003,
+          "event_total_ms": 221.92563152313232,
+          "wall_s": 0.23585544500383548,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 5.304640054702759,
+          "mean_ms": 5.304563207626343,
+          "p10_ms": 5.3023681640625,
+          "p90_ms": 5.306911945343018,
+          "min_ms": 5.296864032745361,
+          "max_ms": 5.308703899383545,
+          "event_total_ms": 530.4563207626343,
+          "wall_s": 0.5630365990073187,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      }
+    },
+    "1_task3_k1": {
+      "meta": {
+        "slug": "1_task3_k1",
+        "level": "1",
+        "task_id": 3,
+        "op_name": "3_Batched_matrix_multiplication",
+        "kernel_rank": 1,
+        "kernel_name": "bmm_stream_overlap_base_base",
+        "archive_runtime_ms": 0.546,
+        "archive_max_diff": "0.0",
+        "code_hash": "852f35e20041"
+      },
+      "status": "hung",
+      "budget_s": 540
+    },
+    "1_task23_k0": {
+      "meta": {
+        "slug": "1_task23_k0",
+        "level": "1",
+        "task_id": 23,
+        "op_name": "23_Softmax",
+        "kernel_rank": 0,
+        "kernel_name": "reduced_sync_softmax_kernel_edit_1",
+        "archive_runtime_ms": 0.011,
+        "archive_max_diff": "0.0",
+        "code_hash": "001ee596a8ea"
+      },
+      "status": "ok",
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 9.313225746154785e-10,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.012543999589979649,
+          "mean_ms": 0.01253791993483901,
+          "p10_ms": 0.01235199999064207,
+          "p90_ms": 0.012799999676644802,
+          "min_ms": 0.012191999703645706,
+          "max_ms": 0.013439999893307686,
+          "event_total_ms": 1.253791993483901,
+          "wall_s": 0.01327432700782083,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 0.02425600029528141,
+          "mean_ms": 0.024301439709961414,
+          "p10_ms": 0.024159999564290047,
+          "p90_ms": 0.02457600086927414,
+          "min_ms": 0.02396799996495247,
+          "max_ms": 0.024639999493956566,
+          "event_total_ms": 2.4301439709961414,
+          "wall_s": 0.016052680992288515,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 0.04956800118088722,
+          "mean_ms": 0.049626560024917124,
+          "p10_ms": 0.04934399947524071,
+          "p90_ms": 0.04995200037956238,
+          "min_ms": 0.04931199923157692,
+          "max_ms": 0.05027199909090996,
+          "event_total_ms": 4.962656002491713,
+          "wall_s": 0.03770307700324338,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      }
+    },
+    "1_task23_k1": {
+      "meta": {
+        "slug": "1_task23_k1",
+        "level": "1",
+        "task_id": 23,
+        "op_name": "23_Softmax",
+        "kernel_rank": 1,
+        "kernel_name": "minimal_sync_softmax_base",
+        "archive_runtime_ms": 0.013,
+        "archive_max_diff": "0.0",
+        "code_hash": "a4f2ac18b7bc"
+      },
+      "status": "ok",
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 9.313225746154785e-10,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.015359999611973763,
+          "mean_ms": 0.015365119893103837,
+          "p10_ms": 0.015168000012636185,
+          "p90_ms": 0.015584000386297703,
+          "min_ms": 0.01500799972563982,
+          "max_ms": 0.016672000288963318,
+          "event_total_ms": 1.5365119893103838,
+          "wall_s": 0.01345385100285057,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 0.031488001346588135,
+          "mean_ms": 0.03149664018303156,
+          "p10_ms": 0.03136000037193298,
+          "p90_ms": 0.031647998839616776,
+          "min_ms": 0.031231999397277832,
+          "max_ms": 0.03187200054526329,
+          "event_total_ms": 3.149664018303156,
+          "wall_s": 0.016776125004980713,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 0.068207997828722,
+          "mean_ms": 0.068170560374856,
+          "p10_ms": 0.06752000004053116,
+          "p90_ms": 0.0687360018491745,
+          "min_ms": 0.06700800359249115,
+          "max_ms": 0.06908799707889557,
+          "event_total_ms": 6.8170560374855995,
+          "wall_s": 0.03955885300820228,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      }
+    },
+    "1_task4_k0": {
+      "meta": {
+        "slug": "1_task4_k0",
+        "level": "1",
+        "task_id": 4,
+        "op_name": "4_Matrix_vector_multiplication_",
+        "kernel_rank": 0,
+        "kernel_name": "modular_device_functions_matvec_edit_1",
+        "archive_runtime_ms": 0.065,
+        "archive_max_diff": "0.001",
+        "code_hash": "37450a9798b6"
+      },
+      "status": "ok",
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.000518798828125,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.06656000018119812,
+          "mean_ms": 0.06658719964325428,
+          "p10_ms": 0.06543999910354614,
+          "p90_ms": 0.06752000004053116,
+          "min_ms": 0.06508799642324448,
+          "max_ms": 0.06812799721956253,
+          "event_total_ms": 6.658719964325428,
+          "wall_s": 0.015945954000926577,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 0.0769759975373745,
+          "mean_ms": 0.07691392004489898,
+          "p10_ms": 0.07596799731254578,
+          "p90_ms": 0.07772800326347351,
+          "min_ms": 0.07523199915885925,
+          "max_ms": 0.07820799946784973,
+          "event_total_ms": 7.691392004489899,
+          "wall_s": 0.021411271998658776,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 0.1430239975452423,
+          "mean_ms": 0.14291871964931488,
+          "p10_ms": 0.14214399456977844,
+          "p90_ms": 0.14348800480365753,
+          "min_ms": 0.14192000031471252,
+          "max_ms": 0.14431999623775482,
+          "event_total_ms": 14.291871964931488,
+          "wall_s": 0.04701782899792306,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      }
+    },
+    "1_task4_k1": {
+      "meta": {
+        "slug": "1_task4_k1",
+        "level": "1",
+        "task_id": 4,
+        "op_name": "4_Matrix_vector_multiplication_",
+        "kernel_rank": 1,
+        "kernel_name": "ldg_aligned_matvec_mul_base",
+        "archive_runtime_ms": 0.081,
+        "archive_max_diff": "0.001",
+        "code_hash": "5b79bd28241a"
+      },
+      "status": "ok",
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.000457763671875,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 0.08243200182914734,
+          "mean_ms": 0.08242496013641358,
+          "p10_ms": 0.08144000172615051,
+          "p90_ms": 0.08316799998283386,
+          "min_ms": 0.08089599758386612,
+          "max_ms": 0.08425600081682205,
+          "event_total_ms": 8.242496013641357,
+          "wall_s": 0.017523368005640805,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 0.09283199906349182,
+          "mean_ms": 0.09283584021031857,
+          "p10_ms": 0.09206400066614151,
+          "p90_ms": 0.09356799721717834,
+          "min_ms": 0.09164799749851227,
+          "max_ms": 0.0944959968328476,
+          "event_total_ms": 9.283584021031857,
+          "wall_s": 0.022909972991328686,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 0.13049599528312683,
+          "mean_ms": 0.13054560035467147,
+          "p10_ms": 0.12972800433635712,
+          "p90_ms": 0.13132800161838531,
+          "min_ms": 0.12934400141239166,
+          "max_ms": 0.13212800025939941,
+          "event_total_ms": 13.054560035467148,
+          "wall_s": 0.04578725001192652,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      }
+    },
+    "1_task16_k0": {
+      "meta": {
+        "slug": "1_task16_k0",
+        "level": "1",
+        "task_id": 16,
+        "op_name": "16_Matmul_with_transposed_A",
+        "kernel_rank": 0,
+        "kernel_name": "tiled_double_output_base",
+        "archive_runtime_ms": 2.288,
+        "archive_max_diff": "0.001",
+        "code_hash": "14fc3d17117a"
+      },
+      "status": "ok",
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0009765625,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 2.4723360538482666,
+          "mean_ms": 2.472803828716278,
+          "p10_ms": 2.470047950744629,
+          "p90_ms": 2.475775957107544,
+          "min_ms": 2.469088077545166,
+          "max_ms": 2.489759922027588,
+          "event_total_ms": 247.2803828716278,
+          "wall_s": 0.25657280199811794,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "n": 100,
+          "median_ms": 6.38752007484436,
+          "mean_ms": 6.389280643463135,
+          "p10_ms": 6.380447864532471,
+          "p90_ms": 6.400576114654541,
+          "min_ms": 6.375135898590088,
+          "max_ms": 6.4152960777282715,
+          "event_total_ms": 638.9280643463135,
+          "wall_s": 0.6526096269953996,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r96": {
+          "n": 100,
+          "median_ms": 16.093024253845215,
+          "mean_ms": 16.092851161956787,
+          "p10_ms": 16.070880889892578,
+          "p90_ms": 16.114336013793945,
+          "min_ms": 16.061567306518555,
+          "max_ms": 16.137983322143555,
+          "event_total_ms": 1609.2851161956787,
+          "wall_s": 1.6419322329893475,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      }
+    },
+    "1_task16_k1": {
+      "meta": {
+        "slug": "1_task16_k1",
+        "level": "1",
+        "task_id": 16,
+        "op_name": "16_Matmul_with_transposed_A",
+        "kernel_rank": 1,
+        "kernel_name": "modular_tiled_matmul_base_base",
+        "archive_runtime_ms": 2.766,
+        "archive_max_diff": "0.001",
+        "code_hash": "660bd9473de7"
+      },
+      "status": "ok",
+      "verify": {
+        "ok": true,
+        "max_abs_diff": 0.0003509521484375,
+        "error": ""
+      },
+      "conditions": {
+        "isolated": {
+          "n": 100,
+          "median_ms": 2.981663942337036,
+          "mean_ms": 2.9818662428855895,
+          "p10_ms": 2.9790079593658447,
+          "p90_ms": 2.984544038772583,
+          "min_ms": 2.976288080215454,
+          "max_ms": 2.9985599517822266,
+          "event_total_ms": 298.18662428855896,
+          "wall_s": 0.30748912299168296,
+          "clocks_mhz": [
+            1830,
+            1830
+          ]
+        },
+        "pressure_r32": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r96": {
+          "starved": true,
+          "timeout_s": 60.0
+        },
+        "pressure_r240": {
+          "starved": true,
+          "timeout_s": 60.0
+        }
+      }
+    },
+    "1_task98_k0": {
+      "meta": {
+        "slug": "1_task98_k0",
+        "level": "1",
+        "task_id": 98,
+        "op_name": "98_KLDivLoss",
+        "kernel_rank": 0,
+        "kernel_name": "optimized_kl_div_cuda_base",
+        "archive_runtime_ms": 0.011,
+        "archive_max_diff": "0.002",
+        "code_hash": "4a5e5f6d2fc2"
+      },
+      "status": "verify_failed",
+      "verify": {
+        "ok": false,
+        "max_abs_diff": NaN,
+        "error": "shape torch.Size([1]) vs torch.Size([])"
+      }
+    },
+    "1_task98_k1": {
+      "meta": {
+        "slug": "1_task98_k1",
+        "level": "1",
+        "task_id": 98,
+        "op_name": "98_KLDivLoss",
+        "kernel_rank": 1,
+        "kernel_name": "kldiv_unrolled_vectorized_base_base",
+        "archive_runtime_ms": 0.013,
+        "archive_max_diff": "0.001",
+        "code_hash": "586419c7c9de"
+      },
+      "status": "verify_failed",
+      "verify": {
+        "ok": false,
+        "max_abs_diff": NaN,
+        "error": "shape torch.Size([1]) vs torch.Size([])"
+      }
+    }
+  },
+  "flips": {
+    "1_task1": {
+      "op_name": "1_Square_matrix_multiplication_",
+      "isolated_ranking": [
+        [
+          "1_task1_k0",
+          1.0900320410728455
+        ],
+        [
+          "1_task1_k1",
+          1.140720009803772
+        ]
+      ],
+      "conditions": {
+        "pressure_r32": {
+          "ranking": [
+            [
+              "1_task1_k0",
+              null,
+              true
+            ],
+            [
+              "1_task1_k1",
+              null,
+              true
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task1_k0": null,
+            "1_task1_k1": null
+          }
+        },
+        "pressure_r96": {
+          "ranking": [
+            [
+              "1_task1_k0",
+              null,
+              true
+            ],
+            [
+              "1_task1_k1",
+              null,
+              true
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task1_k0": null,
+            "1_task1_k1": null
+          }
+        },
+        "pressure_r240": {
+          "ranking": [
+            [
+              "1_task1_k0",
+              null,
+              true
+            ],
+            [
+              "1_task1_k1",
+              null,
+              true
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task1_k0": null,
+            "1_task1_k1": null
+          }
+        }
+      }
+    },
+    "1_task3": {
+      "error": "only 1 usable kernel(s)"
+    },
+    "1_task23": {
+      "op_name": "23_Softmax",
+      "isolated_ranking": [
+        [
+          "1_task23_k0",
+          0.012543999589979649
+        ],
+        [
+          "1_task23_k1",
+          0.015359999611973763
+        ]
+      ],
+      "conditions": {
+        "pressure_r32": {
+          "ranking": [
+            [
+              "1_task23_k0",
+              0.02425600029528141,
+              false
+            ],
+            [
+              "1_task23_k1",
+              0.031488001346588135,
+              false
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task23_k0": 1.933673556132567,
+            "1_task23_k1": 2.050000139455858
+          }
+        },
+        "pressure_r96": {
+          "ranking": [
+            [
+              "1_task23_k0",
+              0.04956800118088722,
+              false
+            ],
+            [
+              "1_task23_k1",
+              0.068207997828722,
+              false
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task23_k0": 3.951530835546499,
+            "1_task23_k1": 4.4406249708203775
+          }
+        },
+        "pressure_r240": {
+          "ranking": [
+            [
+              "1_task23_k0",
+              null,
+              true
+            ],
+            [
+              "1_task23_k1",
+              null,
+              true
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task23_k0": null,
+            "1_task23_k1": null
+          }
+        }
+      }
+    },
+    "1_task4": {
+      "op_name": "4_Matrix_vector_multiplication_",
+      "isolated_ranking": [
+        [
+          "1_task4_k0",
+          0.06656000018119812
+        ],
+        [
+          "1_task4_k1",
+          0.08243200182914734
+        ]
+      ],
+      "conditions": {
+        "pressure_r32": {
+          "ranking": [
+            [
+              "1_task4_k0",
+              0.0769759975373745,
+              false
+            ],
+            [
+              "1_task4_k1",
+              0.09283199906349182,
+              false
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task4_k0": 1.1564903444684589,
+            "1_task4_k1": 1.126164559922978
+          }
+        },
+        "pressure_r96": {
+          "ranking": [
+            [
+              "1_task4_k1",
+              0.13049599528312683,
+              false
+            ],
+            [
+              "1_task4_k0",
+              0.1430239975452423,
+              false
+            ]
+          ],
+          "top1_flip": true,
+          "fragility": {
+            "1_task4_k0": 2.148798034192971,
+            "1_task4_k1": 1.5830744418120442
+          }
+        },
+        "pressure_r240": {
+          "ranking": [
+            [
+              "1_task4_k0",
+              null,
+              true
+            ],
+            [
+              "1_task4_k1",
+              null,
+              true
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task4_k0": null,
+            "1_task4_k1": null
+          }
+        }
+      }
+    },
+    "1_task16": {
+      "op_name": "16_Matmul_with_transposed_A",
+      "isolated_ranking": [
+        [
+          "1_task16_k0",
+          2.4723360538482666
+        ],
+        [
+          "1_task16_k1",
+          2.981663942337036
+        ]
+      ],
+      "conditions": {
+        "pressure_r32": {
+          "ranking": [
+            [
+              "1_task16_k0",
+              6.38752007484436,
+              false
+            ],
+            [
+              "1_task16_k1",
+              null,
+              true
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task16_k0": 2.5835970255346115,
+            "1_task16_k1": null
+          }
+        },
+        "pressure_r96": {
+          "ranking": [
+            [
+              "1_task16_k0",
+              16.093024253845215,
+              false
+            ],
+            [
+              "1_task16_k1",
+              null,
+              true
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task16_k0": 6.509238187420327,
+            "1_task16_k1": null
+          }
+        },
+        "pressure_r240": {
+          "ranking": [
+            [
+              "1_task16_k0",
+              null,
+              true
+            ],
+            [
+              "1_task16_k1",
+              null,
+              true
+            ]
+          ],
+          "top1_flip": false,
+          "fragility": {
+            "1_task16_k0": null,
+            "1_task16_k1": null
+          }
+        }
+      }
+    }
+  }
+}

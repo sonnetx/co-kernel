@@ -1,0 +1,77 @@
+name, driver_version, clocks.current.sm [MHz], clocks.max.sm [MHz], persistence_mode
+NVIDIA H100 80GB HBM3, 550.163.01, 345 MHz, 1980 MHz, Enabled
+env: {"gpu": "NVIDIA H100 80GB HBM3", "torch": "2.5.1+cu124", "cuda": "12.4", "hostname": "sh04-03n05.int", "time": "2026-09-02T14:28:43", "n_iter": 100, "levels": [32, 96, 240], "blocks_per_sm": 1, "pressure_threads": 256}
+1_task1_k0 (1_Square_matrix_multiplication_, archive 1.007 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task1_k0: ok in 262s | isolated 1090.0 us | r32 STARVED | r96 STARVED | r240 STARVED
+1_task1_k1 (1_Square_matrix_multiplication_, archive 1.051 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task1_k1: ok in 222s | isolated 1140.7 us | r32 STARVED | r96 STARVED | r240 STARVED
+1_task3_k0 (3_Batched_matrix_multiplication, archive 0.511 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task3_k0: ok in 103s | isolated 539.6 us | r32 4.11x | r96 9.83x | r240 STARVED
+1_task3_k1 (3_Batched_matrix_multiplication, archive 0.546 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task3_k1: HUNG, killed after 540s
+1_task23_k0 (23_Softmax, archive 0.011 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task23_k0: ok in 101s | isolated 12.5 us | r32 1.93x | r96 3.95x | r240 STARVED
+1_task23_k1 (23_Softmax, archive 0.013 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task23_k1: ok in 100s | isolated 15.4 us | r32 2.05x | r96 4.44x | r240 STARVED
+1_task4_k0 (4_Matrix_vector_multiplication_, archive 0.065 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task4_k0: ok in 101s | isolated 66.6 us | r32 1.16x | r96 2.15x | r240 STARVED
+1_task4_k1 (4_Matrix_vector_multiplication_, archive 0.081 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task4_k1: ok in 101s | isolated 82.4 us | r32 1.13x | r96 1.58x | r240 STARVED
+1_task16_k0 (16_Matmul_with_transposed_A, archive 2.288 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task16_k0: ok in 103s | isolated 2472.3 us | r32 2.58x | r96 6.51x | r240 STARVED
+1_task16_k1 (16_Matmul_with_transposed_A, archive 2.766 ms) -> subprocess (budget 540s)
+  condition: isolated
+  condition: pressure_r32 (watchdog 60s)
+  condition: pressure_r96 (watchdog 60s)
+  condition: pressure_r240 (watchdog 60s)
+  1_task16_k1: ok in 221s | isolated 2981.7 us | r32 STARVED | r96 STARVED | r240 STARVED
+1_task98_k0 (98_KLDivLoss, archive 0.011 ms) -> subprocess (budget 540s)
+  1_task98_k0: verify_failed (shape torch.Size([1]) vs torch.Size([]))
+1_task98_k1 (98_KLDivLoss, archive 0.013 ms) -> subprocess (budget 540s)
+  1_task98_k1: verify_failed (shape torch.Size([1]) vs torch.Size([]))
+wrote results/day_one_41757499.json
+
+=== top-1 flips (isolated winner vs co-located winner) ===
+1_task1  1_Square_matrix_multiplication_  r32:same  r96:same  r240:same
+1_task3: only 1 usable kernel(s)
+1_task23  23_Softmax  r32:same  r96:same  r240:same
+1_task4  4_Matrix_vector_multiplication_  r32:same  r96:FLIP  r240:same
+1_task16  16_Matmul_with_transposed_A  r32:same  r96:same  r240:same
+
+any top-1 flip: True
