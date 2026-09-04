@@ -89,7 +89,7 @@ Our first co-runner polled its stop flag in mapped host memory. Approximately 33
 
 Our first timing loop synchronized with `torch.cuda.synchronize()`, which waits on every stream including the one carrying a co-runner that stops only when instructed, and therefore deadlocks. Timing must synchronize on an event recorded on the candidate stream.
 
-We validate the corrected harness two ways. Isolated medians reproduce the archive's recorded runtimes within a few percent across all candidates. Multiprocessor clocks, sampled through NVML before and after every pass, held at 1830 MHz throughout with persistence mode enabled, against a maximum of 1980 MHz, so we can exclude thermal and frequency effects at these durations without locking clocks, which we lack the privileges to do.
+We validate the corrected harness three ways. Isolated medians reproduce the archive's recorded runtimes within a few percent across all candidates. After a later refactor that moved co-runner control behind an interface, isolated medians for the square-matmul candidates reproduced to 1088.4 us and 1140.5 us against 1090.0 us and 1140.7 us measured before it, agreeing to 0.15% on a different day, which bounds run-to-run variation in the isolated measurement even though it does not speak to the co-located one. Multiprocessor clocks, sampled through NVML before and after every pass, held at 1830 MHz throughout with persistence mode enabled, against a maximum of 1980 MHz, so we can exclude thermal and frequency effects at these durations without locking clocks, which we lack the privileges to do.
 
 ## 4. Results
 
