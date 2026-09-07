@@ -60,6 +60,8 @@ namespace {
 int* h_flag = nullptr;   // pinned staging for the async flag copy
 int* d_stop = nullptr;   // device-memory stop flag
 float* d_sink = nullptr;
+unsigned long long* d_iters = nullptr;      // progress counter (device)
+unsigned long long* h_iters = nullptr;      // pinned staging for reading it
 cudaStream_t pressure_stream = nullptr;
 cudaStream_t copy_stream = nullptr;
 bool active = false;
@@ -67,7 +69,7 @@ bool active = false;
 template <int NREG>
 __global__ void __launch_bounds__(256, 1)
     pressure_kernel(const volatile int* stop, float* sink, float seed,
-                    int smem_floats) {
+                    int smem_floats, unsigned long long* iters) {
   extern __shared__ float smem[];
   float acc[NREG];
 #pragma unroll
@@ -89,6 +91,12 @@ __global__ void __launch_bounds__(256, 1)
         acc[i] = fmaf(acc[i], 1.0000001f, 1e-7f);
       }
     }
+    // Progress tick: one 8-byte atomic per block per flag-check batch
+    // (~10-100 us), sampled by the host through the copy engine while the
+    // kernel runs. The rate a candidate suppresses these ticks is the
+    // aggression measurement, so the tick itself must stay too cheap to be
+    // part of the contention: one lane, once per batch.
+    if (threadIdx.x == 0) atomicAdd(iters, 1ULL);
   }
   float s = 0.f;
 #pragma unroll
@@ -100,8 +108,12 @@ __global__ void __launch_bounds__(256, 1)
 void ensure_state() {
   if (h_flag == nullptr) {
     CUDA_OK(cudaHostAlloc((void**)&h_flag, sizeof(int), cudaHostAllocDefault));
+    CUDA_OK(cudaHostAlloc((void**)&h_iters, sizeof(unsigned long long),
+                          cudaHostAllocDefault));
     CUDA_OK(cudaMalloc(&d_stop, sizeof(int)));
     CUDA_OK(cudaMalloc(&d_sink, sizeof(float)));
+    CUDA_OK(cudaMalloc(&d_iters, sizeof(unsigned long long)));
+    CUDA_OK(cudaMemset(d_iters, 0, sizeof(unsigned long long)));
     CUDA_OK(cudaStreamCreateWithFlags(&pressure_stream, cudaStreamNonBlocking));
     CUDA_OK(cudaStreamCreateWithFlags(&copy_stream, cudaStreamNonBlocking));
   }
@@ -119,6 +131,18 @@ int num_sms() {
   CUDA_OK(cudaGetDevice(&dev));
   CUDA_OK(cudaDeviceGetAttribute(&sms, cudaDevAttrMultiProcessorCount, dev));
   return sms;
+}
+
+// Cumulative flag-check batches completed by all blocks since start(). Read
+// through the copy engine, so sampling works while the kernel saturates the
+// SMs. Units are arbitrary but consistent within one start/stop cycle, which
+// is all a rate ratio needs.
+int64_t progress() {
+  ensure_state();
+  CUDA_OK(cudaMemcpyAsync(h_iters, d_iters, sizeof(unsigned long long),
+                          cudaMemcpyDeviceToHost, copy_stream));
+  CUDA_OK(cudaStreamSynchronize(copy_stream));
+  return (int64_t)*h_iters;
 }
 
 // The register levels this build supports, so Python need not duplicate them.
@@ -150,6 +174,8 @@ void start(int64_t nreg, int64_t blocks_per_sm, int64_t threads,
   TORCH_CHECK(threads > 0 && threads <= 256, "threads must be in (0, 256]");
   TORCH_CHECK(smem_bytes >= 0, "smem_bytes must be non-negative");
   set_flag(0);
+  CUDA_OK(cudaMemsetAsync(d_iters, 0, sizeof(unsigned long long), copy_stream));
+  CUDA_OK(cudaStreamSynchronize(copy_stream));
   dim3 grid(num_sms() * (int)blocks_per_sm);
   dim3 block((int)threads);
   int smem = (int)smem_bytes;
@@ -165,7 +191,7 @@ void start(int64_t nreg, int64_t blocks_per_sm, int64_t threads,
           smem));                                                             \
     }                                                                         \
     pressure_kernel<N><<<grid, block, smem, pressure_stream>>>(               \
-        d_stop, d_sink, 0.5f, smem_floats);                                   \
+        d_stop, d_sink, 0.5f, smem_floats, d_iters);                          \
     launched = true;                                                          \
   }
   COKERNEL_PRESSURE_LEVELS(COKERNEL_ONE_LAUNCH)
@@ -196,6 +222,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
         pybind11::arg("threads") = 256, pybind11::arg("smem_bytes") = 0);
   m.def("stop", &stop, "Stop pressure kernel and synchronize");
   m.def("running", &running, "Whether the pressure kernel is active");
+  m.def("progress", &progress,
+        "Flag-check batches completed by all blocks since start()");
   m.def("num_sms", &num_sms, "SM count of device 0");
   m.def("levels", &levels, "Register levels compiled into this build");
   m.def("reg_info", &reg_info,

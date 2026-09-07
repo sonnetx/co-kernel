@@ -26,6 +26,10 @@ docs/EXTENDING.md for a worked sketch.
 
 from __future__ import annotations
 
+import subprocess
+import sys
+import tempfile
+import time
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -55,6 +59,14 @@ class CoRunner(Protocol):
         """Short key for a level, used in result keys and log lines."""
         ...
 
+    def progress(self) -> int | None:
+        """Cumulative work units completed since `start`, or None when the
+        neighbor cannot report progress. Units are arbitrary but must be
+        consistent within one start/stop cycle; the harness only ever uses
+        the ratio of two rates. Must be callable while the neighbor runs and
+        while the main thread is busy with candidate work."""
+        ...
+
 
 class NullCoRunner:
     """A neighbor that does nothing. Control condition."""
@@ -73,6 +85,9 @@ class NullCoRunner:
 
     def label(self, level: Any) -> str:
         return "null"
+
+    def progress(self) -> int | None:
+        return None
 
 
 class SyntheticPressure:
@@ -143,3 +158,129 @@ class SyntheticPressure:
 
     def label(self, level: Any) -> str:
         return f"r{int(level)}"
+
+    def progress(self) -> int | None:
+        return int(self._ext.progress())
+
+
+class ProcessCoRunner:
+    """A neighbor in its own process, so its own CUDA context.
+
+    With no MPS daemon the contexts time-slice, which is the plain
+    multi-process arm. With an MPS daemon up and both processes inheriting
+    CUDA_MPS_PIPE_DIRECTORY, kernels co-execute in a shared context, which is
+    the deployment-representative arm. The harness code is identical either
+    way; the difference is environment set up by the launcher.
+
+    `kind` selects a built-in neighbor from cokernel.neighbor (pressure, gemm,
+    stream). Coordination happens through ready/stop/progress files, so `stop`
+    works from a watchdog thread regardless of what either process is doing.
+    """
+
+    def __init__(
+        self,
+        kind: str,
+        levels: list,
+        build_dir: str | Path | None = None,
+        ready_timeout_s: float = 120.0,
+        workdir: str | Path | None = None,
+    ):
+        self.kind = kind
+        self._levels = list(levels)
+        self.build_dir = Path(build_dir) if build_dir else None
+        self.ready_timeout_s = ready_timeout_s
+        self.workdir = Path(workdir) if workdir else Path(tempfile.mkdtemp(prefix="cokernel_nbr_"))
+        self.workdir.mkdir(parents=True, exist_ok=True)
+        self._proc: subprocess.Popen | None = None
+        self._files: dict[str, Path] = {}
+
+    def levels(self) -> list[Any]:
+        return list(self._levels)
+
+    def start(self, level: Any) -> None:
+        if self._proc is not None:
+            raise RuntimeError("neighbor already running")
+        tag = f"{self.kind}_{level}_{time.time_ns()}"
+        self._files = {
+            "ready": self.workdir / f"{tag}.ready",
+            "stop": self.workdir / f"{tag}.stop",
+            "progress": self.workdir / f"{tag}.progress",
+        }
+        cmd = [
+            sys.executable, "-m", "cokernel.neighbor",
+            "--kind", self.kind, "--level", str(level),
+            "--ready-file", str(self._files["ready"]),
+            "--stop-file", str(self._files["stop"]),
+            "--progress-file", str(self._files["progress"]),
+        ]
+        if self.build_dir:
+            cmd += ["--build-dir", str(self.build_dir)]
+        self._proc = subprocess.Popen(cmd)
+        deadline = time.perf_counter() + self.ready_timeout_s
+        while not self._files["ready"].exists():
+            if self._proc.poll() is not None:
+                self._proc = None
+                raise RuntimeError(f"neighbor exited before ready (kind={self.kind})")
+            if time.perf_counter() > deadline:
+                self.stop()
+                raise TimeoutError(f"neighbor not ready in {self.ready_timeout_s}s")
+            time.sleep(0.05)
+
+    def stop(self) -> None:
+        proc, self._proc = self._proc, None
+        if proc is None:
+            return
+        if self._files:
+            self._files["stop"].touch()
+        try:
+            proc.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+
+    def progress(self) -> int | None:
+        f = self._files.get("progress")
+        if f is None or not f.exists():
+            return None
+        try:
+            return int(f.read_text().strip())
+        except (ValueError, OSError):
+            return None
+
+    def describe(self) -> dict:
+        return {
+            "kind": f"process_{self.kind}",
+            "levels": [str(x) for x in self._levels],
+            "mps_pipe": __import__("os").environ.get("CUDA_MPS_PIPE_DIRECTORY"),
+        }
+
+    def label(self, level: Any) -> str:
+        return f"{self.kind}{level}"
+
+
+def make_corunner(spec: str, levels: list, build_dir: Path, **synth_kwargs):
+    """Build a co-runner from a CLI spec.
+
+    "synthetic" gives the in-process two-stream arm. "proc-pressure",
+    "proc-gemm", and "proc-stream" give a neighbor process (multi-process arm,
+    or MPS when the daemon environment is present).
+    """
+    if spec == "synthetic":
+        repo = Path(__file__).resolve().parent
+        return SyntheticPressure(
+            csrc_dir=repo / "csrc",
+            build_dir=build_dir / "pressure",
+            levels=[int(x) for x in levels],
+            **synth_kwargs,
+        )
+    if spec.startswith("proc-"):
+        return ProcessCoRunner(
+            kind=spec.removeprefix("proc-"),
+            levels=levels,
+            build_dir=build_dir / "neighbor_pressure",
+        )
+    raise ValueError(f"unknown co-runner spec {spec!r}")

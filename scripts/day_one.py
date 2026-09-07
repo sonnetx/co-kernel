@@ -53,6 +53,7 @@ def measure_kernel(slug: str, entry: dict, args, build_root: Path, rec_path: Pat
         "--build-dir", str(build_root), "--out", str(rec_path),
         "--n-iter", str(args.n_iter), "--warmup", str(args.warmup),
         "--levels", *[str(x) for x in args.levels],
+        "--corunner", args.corunner,
         "--blocks-per-sm", str(args.blocks_per_sm),
         "--pressure-threads", str(args.pressure_threads),
         "--pressure-smem-bytes", str(args.pressure_smem_bytes),
@@ -99,7 +100,13 @@ def main() -> int:
     # Measured regs/thread on H100 (cudaFuncGetAttributes): 32 -> 40,
     # 96 -> 127, 240 -> 255 (the launch-bounds cap; NREG=168 also compiles
     # to 255, so it would duplicate the top level).
-    ap.add_argument("--levels", type=int, nargs="+", default=[32, 96, 240])
+    ap.add_argument("--levels", type=int, nargs="+", default=None,
+                    help="co-runner levels; default depends on --corunner")
+    ap.add_argument("--corunner", default="synthetic",
+                    choices=["synthetic", "proc-pressure", "proc-gemm", "proc-stream"],
+                    help="synthetic = in-process two-stream arm; proc-* = a "
+                         "neighbor process (plain multi-process, or MPS when "
+                         "the daemon environment is present)")
     ap.add_argument("--blocks-per-sm", type=int, default=1)
     ap.add_argument("--pressure-threads", type=int, default=256)
     ap.add_argument("--pressure-smem-bytes", type=int, default=0,
@@ -111,6 +118,16 @@ def main() -> int:
                          "first 2 kernels. Verifies an install in ~2 minutes; "
                          "the timings it produces are not publishable.")
     args = ap.parse_args()
+
+    if args.levels is None:
+        # Level units are per kind: registers for the pressure kinds, matrix
+        # dimension for gemm, buffer MiB for stream.
+        args.levels = {
+            "synthetic": [32, 96, 240],
+            "proc-pressure": [32, 96, 240],
+            "proc-gemm": [8192],
+            "proc-stream": [2048],
+        }[args.corunner]
 
     if args.quick:
         args.n_iter, args.warmup = 10, 3

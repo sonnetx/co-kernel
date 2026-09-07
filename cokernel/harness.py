@@ -245,6 +245,8 @@ def run_conditions(
     # unblocks the device, and the pass is recorded rather than hanging.
     timeout_s = max(min_timeout_s, 20.0 * res.wall_s)
 
+    supports_progress = getattr(corunner, "progress", None) is not None
+
     for level in levels:
         key = corunner.label(level)
         print(f"  condition: {key} (watchdog {timeout_s:.0f}s)", flush=True)
@@ -256,12 +258,42 @@ def run_conditions(
             corunner.stop()
 
         watchdog = threading.Timer(timeout_s, _rescue)
+        aggression: dict | None = None
         try:
             time.sleep(steady_state_s)  # let the co-runner reach steady state
+
+            # Aggression baseline: the neighbor's own rate with the device
+            # otherwise idle, sampled just before the candidate starts. The
+            # co-located rate is sampled across the candidate's timing pass,
+            # and aggression is the ratio: how much the candidate slows its
+            # neighbor. Units cancel, so the neighbor's notion of a work unit
+            # never matters.
+            alone_rate = None
+            if supports_progress and (p := corunner.progress()) is not None:
+                t_a0, p_a0 = time.perf_counter(), p
+                time.sleep(0.5)
+                p_a1 = corunner.progress()
+                if p_a1 is not None and p_a1 > p_a0:
+                    alone_rate = (p_a1 - p_a0) / (time.perf_counter() - t_a0)
+
             watchdog.start()
+            t_c0 = time.perf_counter()
+            p_c0 = corunner.progress() if alone_rate is not None else None
             res = time_forward(
                 candidate, inputs, flush_buf, n_iter, warmup, clock_monitor, abort=fired
             )
+            # Sample co-located progress before stop(); after a watchdog
+            # rescue the neighbor is already gone and the window is polluted,
+            # so aggression is only reported for unrescued passes.
+            if alone_rate is not None and not fired.is_set():
+                p_c1 = corunner.progress()
+                if p_c0 is not None and p_c1 is not None and p_c1 > p_c0:
+                    co_rate = (p_c1 - p_c0) / (time.perf_counter() - t_c0)
+                    aggression = {
+                        "corunner_rate_alone": alone_rate,
+                        "corunner_rate_colocated": co_rate,
+                        "aggression": alone_rate / co_rate,
+                    }
         finally:
             watchdog.cancel()
             corunner.stop()
@@ -273,9 +305,11 @@ def run_conditions(
                 cond.update({"aborted": True, "timeout_s": timeout_s})
             else:
                 cond = {"starved": True, "timeout_s": timeout_s}
-            out[key] = cond
         else:
-            out[key] = res.summary()
+            cond = res.summary()
+        if aggression is not None:
+            cond.update(aggression)
+        out[key] = cond
         time.sleep(0.05)
     return out
 

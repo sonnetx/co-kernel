@@ -24,7 +24,7 @@ print = functools.partial(print, flush=True)  # noqa: A001
 import torch  # noqa: E402
 
 from cokernel import harness  # noqa: E402
-from cokernel.corunner import SyntheticPressure  # noqa: E402
+from cokernel.corunner import make_corunner  # noqa: E402
 
 
 def main() -> int:
@@ -36,6 +36,8 @@ def main() -> int:
     ap.add_argument("--n-iter", type=int, default=100)
     ap.add_argument("--warmup", type=int, default=10)
     ap.add_argument("--levels", type=int, nargs="+", default=[32, 96, 240])
+    ap.add_argument("--corunner", default="synthetic",
+                    choices=["synthetic", "proc-pressure", "proc-gemm", "proc-stream"])
     ap.add_argument("--blocks-per-sm", type=int, default=1)
     ap.add_argument("--pressure-threads", type=int, default=256)
     ap.add_argument("--pressure-smem-bytes", type=int, default=0)
@@ -52,13 +54,13 @@ def main() -> int:
 
     dump("started")  # so a hard kill leaves evidence of where we died
 
-    corunner = SyntheticPressure(
-        csrc_dir=REPO / "cokernel" / "csrc",
-        build_dir=args.build_dir / "pressure",
+    corunner = make_corunner(
+        args.corunner,
+        levels=args.levels,
+        build_dir=args.build_dir,
         blocks_per_sm=args.blocks_per_sm,
         threads=args.pressure_threads,
         smem_bytes=args.pressure_smem_bytes,
-        levels=args.levels,
     )
     rec["corunner"] = corunner.describe()
     kdir = args.corpus / args.slug
