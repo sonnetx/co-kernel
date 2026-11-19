@@ -1,6 +1,6 @@
 # co-kernel
 
-Finished note. The short public version is [The faster kernel was slower](https://sonnetx.github.io/co-kernel/). This repository is the measurement record from one H100 on Sherlock. It is not being extended.
+A harness for checking whether a kernel ranking survives a noisy neighbor. The short public version is [Does your kernel still win when the GPU is shared?](https://sonnetx.github.io/co-kernel/). Bring your own kernels, or implement `CoRunner` and bring your own neighbor.
 
 Do GPU kernel rankings survive co-location?
 

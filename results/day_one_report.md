@@ -1,6 +1,6 @@
 # Co-location inverts the ranking of agent-generated GPU kernels: a preliminary report
 
-Status. This note is finished. The extensions listed in Section 7 were not run. The short public version is at https://sonnetx.github.io/co-kernel/.
+Status. The experiment in this note was run once and is not being extended. The harness is meant to be reused: bring your own kernels, or your own neighbor. The short public version is at https://sonnetx.github.io/co-kernel/.
 
 ## Abstract
 
