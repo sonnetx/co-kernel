@@ -1,5 +1,7 @@
 # Co-location inverts the ranking of agent-generated GPU kernels: a preliminary report
 
+Status. This note is finished. The extensions listed in Section 7 were not run. The short public version is at https://sonnetx.github.io/co-kernel/.
+
 ## Abstract
 
 Kernel-generation benchmarks rank candidate GPU kernels by latency measured on an otherwise idle device, and autotuners select kernels the same way. Production accelerators are shared. We ask whether an isolated ranking survives co-location, and we measure it directly by running agent-generated CUDA kernels alongside a synthetic co-runner whose register footprint we control. On one NVIDIA H100, two independently verified kernels for the same matrix-vector problem reverse order under co-location. The kernel that is 23.8% faster in isolation becomes 9.6% slower when a neighbor holds half the register file, because the two kernels degrade by different factors (2.15x against 1.58x). We derive the condition under which a pair inverts, showing that inversion requires the isolated-faster kernel to be the more fragile one by a margin exceeding its isolated advantage, and we use the condition to explain why an earlier corpus of near-identical kernel pairs produced no inversions. We report one inversion across five rankable tasks, which establishes that isolated ranking is not a property of a kernel alone, and we state explicitly what a single synthetic-neighbor experiment does not establish.

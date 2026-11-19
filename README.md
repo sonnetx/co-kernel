@@ -1,5 +1,7 @@
 # co-kernel
 
+Finished note. The short public version is [The faster kernel was slower](https://sonnetx.github.io/co-kernel/). This repository is the measurement record from one H100 on Sherlock. It is not being extended.
+
 Do GPU kernel rankings survive co-location?
 
 Kernel-generation benchmarks rank candidate kernels by latency on an idle
